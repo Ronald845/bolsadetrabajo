@@ -15,6 +15,7 @@
             <button 
               @click="mostrarModal = true" 
               class="btn btn-primary"
+              :disabled="!aspiranteId"
             >
               <i class="fas fa-plus me-2"></i>
               Agregar Formación
@@ -23,12 +24,30 @@
         </div>
       </div>
 
+      <!-- Debug info (temporal) -->
+      <div v-if="debugMode" class="alert alert-info mb-4">
+        <strong>🔍 Debug Info:</strong><br>
+        Usuario ID: {{ user?.idUsuario }}<br>
+        Aspirante ID: {{ aspiranteId || 'No encontrado' }}<br>
+        Formaciones cargadas: {{ formaciones.length }}
+      </div>
+
       <!-- Lista de formaciones -->
       <div class="row">
         <div class="col-12">
           <div v-if="loading" class="text-center py-5">
             <div class="spinner-border text-primary" role="status"></div>
             <p class="mt-2">Cargando formaciones...</p>
+          </div>
+          
+          <div v-else-if="!aspiranteId" class="text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>Error al cargar perfil</h5>
+            <p class="text-muted">No se pudo obtener tu información de aspirante</p>
+            <button @click="cargarAspiranteId" class="btn btn-primary">
+              <i class="fas fa-refresh me-2"></i>
+              Reintentar
+            </button>
           </div>
           
           <div v-else-if="formaciones.length === 0" class="text-center py-5">
@@ -192,7 +211,7 @@
                       label="Fecha de Finalización"
                       icon="fas fa-calendar-check"
                       :min="form.fechaInicio"
-                      help-text="Deja vacío si aún estás estudiando"
+                      help-text="Opcional - Solo llena si ya terminaste los estudios"
                       :error="errors.fechaFin"
                     />
                   </div>
@@ -267,6 +286,7 @@ import FormField from './FormField.vue'
 import { aspiranteService } from '../services/aspiranteService'
 import { validators } from '../utils/validators'
 import { TIPOS_FORMACION } from '../utils/constants'
+import api from '../services/api'
 
 export default {
   name: 'FormacionAcademica',
@@ -281,6 +301,7 @@ export default {
       editando: false,
       message: '',
       messageType: 'success',
+      debugMode: true, // Cambiar a false en producción
       
       formaciones: [],
       formacionAEliminar: null,
@@ -312,11 +333,12 @@ export default {
              !this.errors.titulo && 
              !this.errors.tipoFormacion &&
              !this.errors.fechaInicio &&
-             !this.errors.fechaFin &&
+             !this.errors.fechaFin &&  // ✅ Solo verificar si NO hay error (no si tiene valor)
              this.form.institucion && 
              this.form.titulo && 
              this.form.tipoFormacion &&
              this.form.fechaInicio
+             // ✅ REMOVIDO: this.form.fechaFin ya que es opcional
     },
     
     messageClass() {
@@ -334,6 +356,7 @@ export default {
   },
   
   async mounted() {
+    console.log('🔄 FormacionAcademica mounted, cargando datos...')
     await this.cargarAspiranteId()
     if (this.aspiranteId) {
       await this.cargarFormaciones()
@@ -343,28 +366,47 @@ export default {
   methods: {
     async cargarAspiranteId() {
       try {
-        const response = await aspiranteService.obtenerFormaciones()
-        const aspirantes = response.filter(f => f.aspirante?.idUsuario === this.user.idUsuario)
-        if (aspirantes.length > 0) {
-          this.aspiranteId = aspirantes[0].idAspirante
+        console.log('🔍 Buscando aspirante para usuario:', this.user?.idUsuario)
+        
+        // Método 1: Buscar directamente en la tabla Aspirante
+        const response = await api.get('/Aspirante/todos')
+        console.log('📋 Aspirantes encontrados:', response.data)
+        
+        const aspiranteActual = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
+        
+        if (aspiranteActual) {
+          this.aspiranteId = aspiranteActual.idAspirante
+          console.log('✅ Aspirante ID encontrado:', this.aspiranteId)
         } else {
-          // Obtener aspirante por ID de usuario
-          const aspResponse = await this.$store.dispatch('getAspiranteByUserId', this.user.idUsuario)
-          this.aspiranteId = aspResponse?.idAspirante
+          console.log('❌ No se encontró aspirante para el usuario:', this.user?.idUsuario)
+          this.showMessage('No se encontró tu perfil de aspirante. Contacta al administrador.', 'error')
         }
+        
       } catch (error) {
-        console.error('Error obteniendo ID de aspirante:', error)
+        console.error('❌ Error obteniendo ID de aspirante:', error)
+        this.showMessage('Error al cargar tu perfil de aspirante', 'error')
       }
     },
     
     async cargarFormaciones() {
+      if (!this.aspiranteId) {
+        console.log('⚠️ No hay aspiranteId, no se pueden cargar formaciones')
+        return
+      }
+      
       try {
         this.loading = true
+        console.log('📚 Cargando formaciones para aspirante:', this.aspiranteId)
+        
         const response = await aspiranteService.obtenerFormaciones()
+        console.log('📋 Todas las formaciones:', response)
+        
         // Filtrar solo las formaciones del aspirante actual
         this.formaciones = response.filter(f => f.idAspirante === this.aspiranteId)
+        console.log('✅ Formaciones del aspirante:', this.formaciones)
+        
       } catch (error) {
-        console.error('Error cargando formaciones:', error)
+        console.error('❌ Error cargando formaciones:', error)
         this.showMessage('Error al cargar las formaciones', 'error')
       } finally {
         this.loading = false
@@ -394,6 +436,8 @@ export default {
     async eliminarFormacion() {
       try {
         this.eliminando = true
+        console.log('🗑️ Eliminando formación:', this.formacionAEliminar.idFormacion)
+        
         await aspiranteService.eliminarFormacion(this.formacionAEliminar.idFormacion)
         
         await this.cargarFormaciones()
@@ -402,7 +446,7 @@ export default {
         this.showMessage('Formación eliminada exitosamente', 'success')
         
       } catch (error) {
-        console.error('Error eliminando formación:', error)
+        console.error('❌ Error eliminando formación:', error)
         this.showMessage('Error al eliminar la formación', 'error')
       } finally {
         this.eliminando = false
@@ -445,15 +489,29 @@ export default {
         this.errors.fechaInicio = 'La fecha de inicio no puede ser futura'
       }
       
-      if (this.form.fechaFin && new Date(this.form.fechaFin) < new Date(this.form.fechaInicio)) {
-        this.errors.fechaFin = 'La fecha de fin debe ser posterior a la fecha de inicio'
+      // ✅ CORREGIDO: fechaFin es OPCIONAL - solo validar si tiene valor
+      if (this.form.fechaFin) {
+        if (new Date(this.form.fechaFin) < new Date(this.form.fechaInicio)) {
+          this.errors.fechaFin = 'La fecha de fin debe ser posterior a la fecha de inicio'
+        }
+        if (new Date(this.form.fechaFin) > new Date()) {
+          this.errors.fechaFin = 'La fecha de fin no puede ser futura'
+        }
       }
       
       return Object.keys(this.errors).length === 0
     },
     
     async guardarFormacion() {
-      if (!this.validateForm()) return
+      if (!this.validateForm()) {
+        console.log('❌ Validación fallida, errores:', this.errors)
+        return
+      }
+      
+      if (!this.aspiranteId) {
+        this.showMessage('Error: No se pudo identificar tu perfil de aspirante', 'error')
+        return
+      }
       
       try {
         this.guardando = true
@@ -467,12 +525,19 @@ export default {
           tipoFormacion: this.form.tipoFormacion
         }
         
+        console.log('💾 Guardando formación:', formacionData)
+        console.log('🔄 Editando:', this.editando)
+        
         if (this.editando) {
           formacionData.idFormacion = this.form.idFormacion
-          await aspiranteService.actualizarFormacion(formacionData)
+          console.log('📝 Actualizando formación existente con ID:', this.form.idFormacion)
+          const response = await aspiranteService.actualizarFormacion(formacionData)
+          console.log('✅ Respuesta actualización:', response)
           this.showMessage('Formación actualizada exitosamente', 'success')
         } else {
-          await aspiranteService.crearFormacion(formacionData)
+          console.log('🆕 Creando nueva formación')
+          const response = await aspiranteService.crearFormacion(formacionData)
+          console.log('✅ Respuesta creación:', response)
           this.showMessage('Formación agregada exitosamente', 'success')
         }
         
@@ -480,8 +545,29 @@ export default {
         this.cerrarModal()
         
       } catch (error) {
-        console.error('Error guardando formación:', error)
-        this.showMessage('Error al guardar la formación', 'error')
+        console.error('❌ Error completo guardando formación:', error)
+        console.error('❌ Error response:', error.response)
+        console.error('❌ Error data:', error.response?.data)
+        console.error('❌ Error status:', error.response?.status)
+        console.error('❌ Error message:', error.message)
+        
+        // Mensaje de error más específico
+        let errorMessage = 'Error al guardar la formación'
+        if (error.response?.status === 400) {
+          errorMessage = `Error de datos: ${error.response.data || 'Datos inválidos'}`
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Error de autenticación. Inicia sesión nuevamente.'
+        } else if (error.response?.status === 403) {
+          errorMessage = 'No tienes permisos para realizar esta acción'
+        } else if (error.response?.status === 404) {
+          errorMessage = 'Endpoint no encontrado. Verifica la configuración de la API.'
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Error del servidor. Contacta al administrador.'
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = 'Error de conexión. Verifica tu internet.'
+        }
+        
+        this.showMessage(errorMessage, 'error')
       } finally {
         this.guardando = false
       }

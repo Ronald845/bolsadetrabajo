@@ -15,12 +15,21 @@
             <button 
               @click="mostrarModal = true" 
               class="btn btn-info"
+              :disabled="!aspiranteId"
             >
               <i class="fas fa-plus me-2"></i>
               Agregar Certificación
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- Debug info (temporal) -->
+      <div v-if="debugMode" class="alert alert-info mb-4">
+        <strong>🔍 Debug Info:</strong><br>
+        Usuario ID: {{ user?.idUsuario }}<br>
+        Aspirante ID: {{ aspiranteId || 'No encontrado' }}<br>
+        Certificaciones cargadas: {{ certificaciones.length }}
       </div>
 
       <!-- Filtros y búsqueda -->
@@ -62,6 +71,16 @@
           <div v-if="loading" class="text-center py-5">
             <div class="spinner-border text-info" role="status"></div>
             <p class="mt-2">Cargando certificaciones...</p>
+          </div>
+          
+          <div v-else-if="!aspiranteId" class="text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>Error al cargar perfil</h5>
+            <p class="text-muted">No se pudo obtener tu información de aspirante</p>
+            <button @click="cargarAspiranteId" class="btn btn-info">
+              <i class="fas fa-refresh me-2"></i>
+              Reintentar
+            </button>
           </div>
           
           <div v-else-if="certificaciones.length === 0" class="text-center py-5">
@@ -184,8 +203,8 @@
                       </div>
                       <div class="col-6 col-md-3">
                         <div class="stat-item">
-                          <div class="stat-number text-info">{{ contarPorEstado('En Progreso') }}</div>
-                          <div class="stat-label">En Progreso</div>
+                          <div class="stat-number text-info">{{ contarPorEstado('Sin Vencimiento') }}</div>
+                          <div class="stat-label">Sin Vencimiento</div>
                         </div>
                       </div>
                       <div class="col-6 col-md-3">
@@ -265,6 +284,7 @@
                       icon="fas fa-calendar-alt"
                       :required="true"
                       :error="errors.fechaInicio"
+                      :max="fechaHoy"
                     />
                   </div>
                   
@@ -276,6 +296,7 @@
                       icon="fas fa-calendar-times"
                       help-text="Opcional - Deja vacío si no vence"
                       :error="errors.fechaFin"
+                      :min="form.fechaInicio"
                     />
                   </div>
                   
@@ -394,6 +415,7 @@ import FormField from './FormField.vue'
 import { aspiranteService } from '../services/aspiranteService'
 import { validators } from '../utils/validators'
 import { TIPOS_CERTIFICACION, ESTADOS_CERTIFICACION, INSTITUCIONES_CERTIFICACION } from '../utils/constants'
+import api from '../services/api'
 
 export default {
   name: 'Certificaciones',
@@ -408,6 +430,7 @@ export default {
       editando: false,
       message: '',
       messageType: 'success',
+      debugMode: true, // Cambiar a false en producción
       
       // Filtros
       filtroTexto: '',
@@ -438,6 +461,10 @@ export default {
   },
   computed: {
     ...mapGetters(['user']),
+    
+    fechaHoy() {
+      return new Date().toISOString().split('T')[0]
+    },
     
     certificacionesFiltradas() {
       let resultado = [...this.certificaciones]
@@ -471,9 +498,12 @@ export default {
       return !this.errors.nombreCertificado && 
              !this.errors.institucion && 
              !this.errors.fechaInicio &&
+             !this.errors.fechaFin &&
+             !this.errors.institucionPersonalizada &&
              this.form.nombreCertificado && 
              this.form.institucion &&
-             this.form.fechaInicio
+             this.form.fechaInicio &&
+             (!this.form.institucion === 'Otros' || this.form.institucionPersonalizada)
     },
     
     messageClass() {
@@ -491,6 +521,7 @@ export default {
   },
   
   async mounted() {
+    console.log('🔄 Certificaciones mounted, cargando datos...')
     await this.cargarAspiranteId()
     if (this.aspiranteId) {
       await this.cargarCertificaciones()
@@ -500,22 +531,47 @@ export default {
   methods: {
     async cargarAspiranteId() {
       try {
-        // Temporal: obtener ID del aspirante
-        this.aspiranteId = 1 // En producción, obtener del store o API
+        console.log('🔍 Buscando aspirante para usuario:', this.user?.idUsuario)
+        
+        // ✅ CORREGIDO: Buscar directamente en la tabla Aspirante
+        const response = await api.get('/Aspirante/todos')
+        console.log('📋 Aspirantes encontrados:', response.data)
+        
+        const aspiranteActual = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
+        
+        if (aspiranteActual) {
+          this.aspiranteId = aspiranteActual.idAspirante
+          console.log('✅ Aspirante ID encontrado:', this.aspiranteId)
+        } else {
+          console.log('❌ No se encontró aspirante para el usuario:', this.user?.idUsuario)
+          this.showMessage('No se encontró tu perfil de aspirante. Contacta al administrador.', 'error')
+        }
+        
       } catch (error) {
-        console.error('Error obteniendo ID de aspirante:', error)
-        this.aspiranteId = 1
+        console.error('❌ Error obteniendo ID de aspirante:', error)
+        this.showMessage('Error al cargar tu perfil de aspirante', 'error')
       }
     },
     
     async cargarCertificaciones() {
+      if (!this.aspiranteId) {
+        console.log('⚠️ No hay aspiranteId, no se pueden cargar certificaciones')
+        return
+      }
+      
       try {
         this.loading = true
+        console.log('🏆 Cargando certificaciones para aspirante:', this.aspiranteId)
+        
         const response = await aspiranteService.obtenerCertificaciones()
+        console.log('📋 Todas las certificaciones:', response)
+        
         // Filtrar solo las certificaciones del aspirante actual
         this.certificaciones = response.filter(cert => cert.idAspirante === this.aspiranteId)
+        console.log('✅ Certificaciones del aspirante:', this.certificaciones)
+        
       } catch (error) {
-        console.error('Error cargando certificaciones:', error)
+        console.error('❌ Error cargando certificaciones:', error)
         this.showMessage('Error al cargar las certificaciones', 'error')
       } finally {
         this.loading = false
@@ -547,6 +603,8 @@ export default {
     async eliminarCertificacion() {
       try {
         this.eliminando = true
+        console.log('🗑️ Eliminando certificación:', this.certificacionAEliminar.idCertificacion)
+        
         await aspiranteService.eliminarCertificacion(this.certificacionAEliminar.idCertificacion)
         
         await this.cargarCertificaciones()
@@ -555,7 +613,7 @@ export default {
         this.showMessage('Certificación eliminada exitosamente', 'success')
         
       } catch (error) {
-        console.error('Error eliminando certificación:', error)
+        console.error('❌ Error eliminando certificación:', error)
         this.showMessage('Error al eliminar la certificación', 'error')
       } finally {
         this.eliminando = false
@@ -596,6 +654,8 @@ export default {
       
       if (!validators.required(this.form.fechaInicio)) {
         this.errors.fechaInicio = 'La fecha de inicio es requerida'
+      } else if (new Date(this.form.fechaInicio) > new Date()) {
+        this.errors.fechaInicio = 'La fecha de inicio no puede ser futura'
       }
       
       if (this.form.fechaFin && this.form.fechaInicio && new Date(this.form.fechaFin) <= new Date(this.form.fechaInicio)) {
@@ -606,7 +666,15 @@ export default {
     },
     
     async guardarCertificacion() {
-      if (!this.validateForm()) return
+      if (!this.validateForm()) {
+        console.log('❌ Validación fallida, errores:', this.errors)
+        return
+      }
+      
+      if (!this.aspiranteId) {
+        this.showMessage('Error: No se pudo identificar tu perfil de aspirante', 'error')
+        return
+      }
       
       try {
         this.guardando = true
@@ -621,12 +689,19 @@ export default {
           codigoCertificado: this.form.codigoCertificado || null
         }
         
+        console.log('💾 Guardando certificación:', certificacionData)
+        console.log('🔄 Editando:', this.editando)
+        
         if (this.editando) {
           certificacionData.idCertificacion = this.form.idCertificacion
-          await aspiranteService.actualizarCertificacion(certificacionData)
+          console.log('📝 Actualizando certificación existente con ID:', this.form.idCertificacion)
+          const response = await aspiranteService.actualizarCertificacion(certificacionData)
+          console.log('✅ Respuesta actualización:', response)
           this.showMessage('Certificación actualizada exitosamente', 'success')
         } else {
-          await aspiranteService.crearCertificacion(certificacionData)
+          console.log('🆕 Creando nueva certificación')
+          const response = await aspiranteService.crearCertificacion(certificacionData)
+          console.log('✅ Respuesta creación:', response)
           this.showMessage('Certificación agregada exitosamente', 'success')
         }
         
@@ -634,8 +709,29 @@ export default {
         this.cerrarModal()
         
       } catch (error) {
-        console.error('Error guardando certificación:', error)
-        this.showMessage('Error al guardar la certificación', 'error')
+        console.error('❌ Error completo guardando certificación:', error)
+        console.error('❌ Error response:', error.response)
+        console.error('❌ Error data:', error.response?.data)
+        console.error('❌ Error status:', error.response?.status)
+        console.error('❌ Error message:', error.message)
+        
+        // Mensaje de error más específico
+        let errorMessage = 'Error al guardar la certificación'
+        if (error.response?.status === 400) {
+          errorMessage = `Error de datos: ${error.response.data || 'Datos inválidos'}`
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Error de autenticación. Inicia sesión nuevamente.'
+        } else if (error.response?.status === 403) {
+          errorMessage = 'No tienes permisos para realizar esta acción'
+        } else if (error.response?.status === 404) {
+          errorMessage = 'Endpoint no encontrado. Verifica la configuración de la API.'
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Error del servidor. Contacta al administrador.'
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = 'Error de conexión. Verifica tu internet.'
+        }
+        
+        this.showMessage(errorMessage, 'error')
       } finally {
         this.guardando = false
       }
@@ -754,11 +850,28 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   overflow: hidden;
+  position: relative;
 }
 
 .certificacion-card .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.certificacion-card .card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #17a2b8, #20c997, #28a745);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.certificacion-card .card:hover::before {
+  opacity: 1;
 }
 
 /* Header de certificación */
@@ -1025,23 +1138,6 @@ export default {
 
 .certificacion-card:nth-child(3n) {
   animation-delay: 0.2s;
-}
-
-/* Efectos hover especiales */
-.certificacion-card .card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #17a2b8, #20c997, #28a745);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.certificacion-card .card:hover::before {
-  opacity: 1;
 }
 
 /* Scrollbar personalizado */

@@ -15,6 +15,7 @@
             <button 
               @click="mostrarModal = true" 
               class="btn btn-success"
+              :disabled="!aspiranteId"
             >
               <i class="fas fa-plus me-2"></i>
               Agregar Experiencia
@@ -23,12 +24,30 @@
         </div>
       </div>
 
+      <!-- Debug info (temporal) -->
+      <div v-if="debugMode" class="alert alert-info mb-4">
+        <strong>🔍 Debug Info:</strong><br>
+        Usuario ID: {{ user?.idUsuario }}<br>
+        Aspirante ID: {{ aspiranteId || 'No encontrado' }}<br>
+        Experiencias cargadas: {{ experiencias.length }}
+      </div>
+
       <!-- Lista de experiencias -->
       <div class="row">
         <div class="col-12">
           <div v-if="loading" class="text-center py-5">
             <div class="spinner-border text-success" role="status"></div>
             <p class="mt-2">Cargando experiencias laborales...</p>
+          </div>
+          
+          <div v-else-if="!aspiranteId" class="text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>Error al cargar perfil</h5>
+            <p class="text-muted">No se pudo obtener tu información de aspirante</p>
+            <button @click="cargarAspiranteId" class="btn btn-success">
+              <i class="fas fa-refresh me-2"></i>
+              Reintentar
+            </button>
           </div>
           
           <div v-else-if="experiencias.length === 0" class="text-center py-5">
@@ -328,6 +347,7 @@ import FormField from './FormField.vue'
 import { aspiranteService } from '../services/aspiranteService'
 import { validators } from '../utils/validators'
 import { TIPOS_EMPLEO, NIVELES_PUESTO, SECTORES_EMPRESA } from '../utils/constants'
+import api from '../services/api'
 
 export default {
   name: 'ExperienciaLaboral',
@@ -343,6 +363,7 @@ export default {
       trabajoActual: false,
       message: '',
       messageType: 'success',
+      debugMode: true, // Cambiar a false en producción
       
       experiencias: [],
       experienciaAEliminar: null,
@@ -392,7 +413,8 @@ export default {
              this.form.puestoTrabajo && 
              this.form.nombreEmpresa && 
              this.form.fechaInicio &&
-             this.form.funciones
+             this.form.funciones &&
+             this.form.funciones.trim().length >= 10
     },
     
     messageClass() {
@@ -410,6 +432,7 @@ export default {
   },
   
   async mounted() {
+    console.log('🔄 ExperienciaLaboral mounted, cargando datos...')
     await this.cargarAspiranteId()
     if (this.aspiranteId) {
       await this.cargarExperiencias()
@@ -419,28 +442,47 @@ export default {
   methods: {
     async cargarAspiranteId() {
       try {
-        const response = await aspiranteService.obtenerExperiencias()
-        const experiencias = response.filter(e => e.aspirante?.idUsuario === this.user.idUsuario)
-        if (experiencias.length > 0) {
-          this.aspiranteId = experiencias[0].idAspirante
+        console.log('🔍 Buscando aspirante para usuario:', this.user?.idUsuario)
+        
+        // ✅ CORREGIDO: Buscar directamente en la tabla Aspirante
+        const response = await api.get('/Aspirante/todos')
+        console.log('📋 Aspirantes encontrados:', response.data)
+        
+        const aspiranteActual = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
+        
+        if (aspiranteActual) {
+          this.aspiranteId = aspiranteActual.idAspirante
+          console.log('✅ Aspirante ID encontrado:', this.aspiranteId)
         } else {
-          // Fallback: obtener desde el store o API
-          this.aspiranteId = this.user.idAspirante || 1 // temporal
+          console.log('❌ No se encontró aspirante para el usuario:', this.user?.idUsuario)
+          this.showMessage('No se encontró tu perfil de aspirante. Contacta al administrador.', 'error')
         }
+        
       } catch (error) {
-        console.error('Error obteniendo ID de aspirante:', error)
-        this.aspiranteId = 1 // temporal para pruebas
+        console.error('❌ Error obteniendo ID de aspirante:', error)
+        this.showMessage('Error al cargar tu perfil de aspirante', 'error')
       }
     },
     
     async cargarExperiencias() {
+      if (!this.aspiranteId) {
+        console.log('⚠️ No hay aspiranteId, no se pueden cargar experiencias')
+        return
+      }
+      
       try {
         this.loading = true
+        console.log('💼 Cargando experiencias para aspirante:', this.aspiranteId)
+        
         const response = await aspiranteService.obtenerExperiencias()
+        console.log('📋 Todas las experiencias:', response)
+        
         // Filtrar solo las experiencias del aspirante actual
         this.experiencias = response.filter(e => e.idAspirante === this.aspiranteId)
+        console.log('✅ Experiencias del aspirante:', this.experiencias)
+        
       } catch (error) {
-        console.error('Error cargando experiencias:', error)
+        console.error('❌ Error cargando experiencias:', error)
         this.showMessage('Error al cargar las experiencias laborales', 'error')
       } finally {
         this.loading = false
@@ -472,6 +514,8 @@ export default {
     async eliminarExperiencia() {
       try {
         this.eliminando = true
+        console.log('🗑️ Eliminando experiencia:', this.experienciaAEliminar.idExperiencia)
+        
         await aspiranteService.eliminarExperiencia(this.experienciaAEliminar.idExperiencia)
         
         await this.cargarExperiencias()
@@ -480,7 +524,7 @@ export default {
         this.showMessage('Experiencia laboral eliminada exitosamente', 'success')
         
       } catch (error) {
-        console.error('Error eliminando experiencia:', error)
+        console.error('❌ Error eliminando experiencia:', error)
         this.showMessage('Error al eliminar la experiencia laboral', 'error')
       } finally {
         this.eliminando = false
@@ -536,15 +580,26 @@ export default {
         }
       }
       
-      if (!validators.required(this.form.funciones) || !validators.minLength(this.form.funciones, 10)) {
-        this.errors.funciones = 'Las funciones son requeridas (mínimo 10 caracteres)'
+      // ✅ VALIDACIÓN CORREGIDA DE FUNCIONES
+      if (!this.form.funciones || this.form.funciones.trim().length === 0) {
+        this.errors.funciones = 'Las funciones son requeridas'
+      } else if (this.form.funciones.trim().length < 10) {
+        this.errors.funciones = `Faltan ${10 - this.form.funciones.trim().length} caracteres más`
       }
       
       return Object.keys(this.errors).length === 0
     },
     
     async guardarExperiencia() {
-      if (!this.validateForm()) return
+      if (!this.validateForm()) {
+        console.log('❌ Validación fallida, errores:', this.errors)
+        return
+      }
+      
+      if (!this.aspiranteId) {
+        this.showMessage('Error: No se pudo identificar tu perfil de aspirante', 'error')
+        return
+      }
       
       try {
         this.guardando = true
@@ -559,12 +614,19 @@ export default {
           telefonoEmpresa: this.form.telefonoEmpresa || null
         }
         
+        console.log('💾 Guardando experiencia:', experienciaData)
+        console.log('🔄 Editando:', this.editando)
+        
         if (this.editando) {
           experienciaData.idExperiencia = this.form.idExperiencia
-          await aspiranteService.actualizarExperiencia(experienciaData)
+          console.log('📝 Actualizando experiencia existente con ID:', this.form.idExperiencia)
+          const response = await aspiranteService.actualizarExperiencia(experienciaData)
+          console.log('✅ Respuesta actualización:', response)
           this.showMessage('Experiencia laboral actualizada exitosamente', 'success')
         } else {
-          await aspiranteService.crearExperiencia(experienciaData)
+          console.log('🆕 Creando nueva experiencia')
+          const response = await aspiranteService.crearExperiencia(experienciaData)
+          console.log('✅ Respuesta creación:', response)
           this.showMessage('Experiencia laboral agregada exitosamente', 'success')
         }
         
@@ -572,8 +634,29 @@ export default {
         this.cerrarModal()
         
       } catch (error) {
-        console.error('Error guardando experiencia:', error)
-        this.showMessage('Error al guardar la experiencia laboral', 'error')
+        console.error('❌ Error completo guardando experiencia:', error)
+        console.error('❌ Error response:', error.response)
+        console.error('❌ Error data:', error.response?.data)
+        console.error('❌ Error status:', error.response?.status)
+        console.error('❌ Error message:', error.message)
+        
+        // Mensaje de error más específico
+        let errorMessage = 'Error al guardar la experiencia laboral'
+        if (error.response?.status === 400) {
+          errorMessage = `Error de datos: ${error.response.data || 'Datos inválidos'}`
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Error de autenticación. Inicia sesión nuevamente.'
+        } else if (error.response?.status === 403) {
+          errorMessage = 'No tienes permisos para realizar esta acción'
+        } else if (error.response?.status === 404) {
+          errorMessage = 'Endpoint no encontrado. Verifica la configuración de la API.'
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Error del servidor. Contacta al administrador.'
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = 'Error de conexión. Verifica tu internet.'
+        }
+        
+        this.showMessage(errorMessage, 'error')
       } finally {
         this.guardando = false
       }
@@ -623,226 +706,226 @@ export default {
       if (diffYears > 0) {
         const months = diffMonths % 12
         return `${diffYears} año${diffYears > 1 ? 's' : ''}${months > 0 ? ` y ${months} mes${months > 1 ? 'es' : ''}` : ''}`
-     } else if (diffMonths > 0) {
-       return `${diffMonths} mes${diffMonths > 1 ? 'es' : ''}`
-     } else {
-       return `${diffDays} día${diffDays > 1 ? 's' : ''}`
-     }
-   },
-   
-   showMessage(text, type = 'success') {
-     this.message = text
-     this.messageType = type
-     setTimeout(() => { this.message = '' }, 5000)
-   }
- }
+      } else if (diffMonths > 0) {
+        return `${diffMonths} mes${diffMonths > 1 ? 'es' : ''}`
+      } else {
+        return `${diffDays} día${diffDays > 1 ? 's' : ''}`
+      }
+    },
+    
+    showMessage(text, type = 'success') {
+      this.message = text
+      this.messageType = type
+      setTimeout(() => { this.message = '' }, 5000)
+    }
+  }
 }
 </script>
 
 <style scoped>
 .experiencia-laboral {
- background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
- min-height: 100vh;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  min-height: 100vh;
 }
 
 /* Timeline Styles */
 .timeline {
- position: relative;
- padding-left: 2rem;
+  position: relative;
+  padding-left: 2rem;
 }
 
 .timeline::before {
- content: '';
- position: absolute;
- left: 1rem;
- top: 0;
- bottom: 0;
- width: 2px;
- background: linear-gradient(to bottom, #10b981, #d1fae5);
+  content: '';
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #10b981, #d1fae5);
 }
 
 .timeline-item {
- position: relative;
- margin-bottom: 2rem;
+  position: relative;
+  margin-bottom: 2rem;
 }
 
 .timeline-marker {
- position: absolute;
- left: -2.25rem;
- top: 1rem;
- width: 2.5rem;
- height: 2.5rem;
- background: #10b981;
- border: 3px solid white;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- color: white;
- font-size: 0.875rem;
- box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
- z-index: 2;
+  position: absolute;
+  left: -2.25rem;
+  top: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: #10b981;
+  border: 3px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  z-index: 2;
 }
 
 .timeline-item-current .timeline-marker {
- background: linear-gradient(135deg, #10b981, #059669);
- animation: pulse-success 2s infinite;
+  background: linear-gradient(135deg, #10b981, #059669);
+  animation: pulse-success 2s infinite;
 }
 
 @keyframes pulse-success {
- 0% {
-   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
- }
- 70% {
-   box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
- }
- 100% {
-   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
- }
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 .timeline-content {
- margin-left: 1rem;
+  margin-left: 1rem;
 }
 
 .experiencia-card {
- border: none;
- border-radius: 15px;
- box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
- transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .experiencia-card:hover {
- transform: translateY(-2px);
- box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15);
 }
 
 .timeline-item-current .experiencia-card {
- border-left: 4px solid #10b981;
+  border-left: 4px solid #10b981;
 }
 
 .info-item {
- display: flex;
- align-items: center;
- margin-bottom: 0.5rem;
- font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 
 .funciones-section {
- background: #f8fafc;
- border-radius: 10px;
- padding: 1rem;
- border-left: 4px solid #10b981;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 1rem;
+  border-left: 4px solid #10b981;
 }
 
 .funciones-content {
- font-size: 0.9rem;
- line-height: 1.5;
- color: #4b5563;
- white-space: pre-line;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #4b5563;
+  white-space: pre-line;
 }
 
 /* Modal Styles */
 .modal.show {
- background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .modal-content {
- border-radius: 15px;
- border: none;
+  border-radius: 15px;
+  border: none;
 }
 
 .modal-header {
- border-bottom: 1px solid #e5e7eb;
- border-radius: 15px 15px 0 0;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 15px 15px 0 0;
 }
 
 .modal-footer {
- border-top: 1px solid #e5e7eb;
- border-radius: 0 0 15px 15px;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 0 0 15px 15px;
 }
 
 /* Form Styles */
 .form-check-input:checked {
- background-color: #10b981;
- border-color: #10b981;
+  background-color: #10b981;
+  border-color: #10b981;
 }
 
 .form-check-label {
- font-weight: 500;
- color: #374151;
+  font-weight: 500;
+  color: #374151;
 }
 
 /* Button Styles */
 .btn {
- border-radius: 8px;
- font-weight: 500;
- transition: all 0.2s ease;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .btn:hover {
- transform: translateY(-1px);
+  transform: translateY(-1px);
 }
 
 .btn-success {
- background: linear-gradient(135deg, #10b981, #059669);
- border: none;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
 }
 
 .btn-success:hover {
- background: linear-gradient(135deg, #059669, #047857);
+  background: linear-gradient(135deg, #059669, #047857);
 }
 
 /* Badge Styles */
 .badge {
- font-size: 0.75rem;
- padding: 0.35em 0.65em;
+  font-size: 0.75rem;
+  padding: 0.35em 0.65em;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
- .timeline {
-   padding-left: 1.5rem;
- }
- 
- .timeline::before {
-   left: 0.75rem;
- }
- 
- .timeline-marker {
-   left: -1.75rem;
-   width: 2rem;
-   height: 2rem;
- }
- 
- .timeline-content {
-   margin-left: 0.5rem;
- }
- 
- .modal-dialog {
-   margin: 1rem;
- }
+  .timeline {
+    padding-left: 1.5rem;
+  }
+  
+  .timeline::before {
+    left: 0.75rem;
+  }
+  
+  .timeline-marker {
+    left: -1.75rem;
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .timeline-content {
+    margin-left: 0.5rem;
+  }
+  
+  .modal-dialog {
+    margin: 1rem;
+  }
 }
 
 /* Dropdown Styles */
 .dropdown-toggle::after {
- display: none;
+  display: none;
 }
 
 .dropdown-menu {
- border-radius: 10px;
- border: none;
- box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .dropdown-item {
- border-radius: 5px;
- margin: 0.125rem;
- transition: all 0.2s ease;
+  border-radius: 5px;
+  margin: 0.125rem;
+  transition: all 0.2s ease;
 }
 
 .dropdown-item:hover {
- background-color: #f3f4f6;
- transform: translateX(2px);
+  background-color: #f3f4f6;
+  transform: translateX(2px);
 }
 </style>

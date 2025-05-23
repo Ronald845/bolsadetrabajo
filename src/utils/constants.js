@@ -281,3 +281,5 @@ export const POSICIONES_LOGRO = [
   { value: 'Mención Honorífica', label: 'Mención Honorífica', icon: 'fas fa-scroll', color: 'secondary' },
   { value: 'Completado', label: 'Completado/Logrado', icon: 'fas fa-check-circle', color: 'success' }
 ]
+
+

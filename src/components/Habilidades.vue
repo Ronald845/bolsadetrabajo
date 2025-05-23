@@ -15,12 +15,21 @@
             <button 
               @click="mostrarModal = true" 
               class="btn btn-warning"
+              :disabled="!aspiranteId"
             >
               <i class="fas fa-plus me-2"></i>
               Agregar Habilidad
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- Debug info (temporal) -->
+      <div v-if="debugMode" class="alert alert-info mb-4">
+        <strong>🔍 Debug Info:</strong><br>
+        Usuario ID: {{ user?.idUsuario }}<br>
+        Aspirante ID: {{ aspiranteId || 'No encontrado' }}<br>
+        Habilidades cargadas: {{ habilidades.length }}
       </div>
 
       <!-- Filtros y búsqueda -->
@@ -54,6 +63,16 @@
           <div v-if="loading" class="text-center py-5">
             <div class="spinner-border text-warning" role="status"></div>
             <p class="mt-2">Cargando habilidades...</p>
+          </div>
+          
+          <div v-else-if="!aspiranteId" class="text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>Error al cargar perfil</h5>
+            <p class="text-muted">No se pudo obtener tu información de aspirante</p>
+            <button @click="cargarAspiranteId" class="btn btn-warning">
+              <i class="fas fa-refresh me-2"></i>
+              Reintentar
+            </button>
           </div>
           
           <div v-else-if="habilidades.length === 0" class="text-center py-5">
@@ -294,6 +313,7 @@ import FormField from './FormField.vue'
 import { aspiranteService } from '../services/aspiranteService'
 import { validators } from '../utils/validators'
 import { NIVELES_DOMINIO } from '../utils/constants'
+import api from '../services/api'
 
 export default {
   name: 'Habilidades',
@@ -308,6 +328,7 @@ export default {
       editando: false,
       message: '',
       messageType: 'success',
+      debugMode: true, // Cambiar a false en producción
       
       // Filtros
       filtroTexto: '',
@@ -383,6 +404,7 @@ export default {
   },
   
   async mounted() {
+    console.log('🔄 Habilidades mounted, cargando datos...')
     await this.cargarAspiranteId()
     if (this.aspiranteId) {
       await this.cargarHabilidades()
@@ -392,22 +414,47 @@ export default {
   methods: {
     async cargarAspiranteId() {
       try {
-        // Temporal: obtener ID del aspirante
-        this.aspiranteId = 1 // En producción, obtener del store o API
+        console.log('🔍 Buscando aspirante para usuario:', this.user?.idUsuario)
+        
+        // ✅ CORREGIDO: Buscar directamente en la tabla Aspirante
+        const response = await api.get('/Aspirante/todos')
+        console.log('📋 Aspirantes encontrados:', response.data)
+        
+        const aspiranteActual = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
+        
+        if (aspiranteActual) {
+          this.aspiranteId = aspiranteActual.idAspirante
+          console.log('✅ Aspirante ID encontrado:', this.aspiranteId)
+        } else {
+          console.log('❌ No se encontró aspirante para el usuario:', this.user?.idUsuario)
+          this.showMessage('No se encontró tu perfil de aspirante. Contacta al administrador.', 'error')
+        }
+        
       } catch (error) {
-        console.error('Error obteniendo ID de aspirante:', error)
-        this.aspiranteId = 1
+        console.error('❌ Error obteniendo ID de aspirante:', error)
+        this.showMessage('Error al cargar tu perfil de aspirante', 'error')
       }
     },
     
     async cargarHabilidades() {
+      if (!this.aspiranteId) {
+        console.log('⚠️ No hay aspiranteId, no se pueden cargar habilidades')
+        return
+      }
+      
       try {
         this.loading = true
+        console.log('🛠️ Cargando habilidades para aspirante:', this.aspiranteId)
+        
         const response = await aspiranteService.obtenerHabilidades()
+        console.log('📋 Todas las habilidades:', response)
+        
         // Filtrar solo las habilidades del aspirante actual
         this.habilidades = response.filter(h => h.idAspirante === this.aspiranteId)
+        console.log('✅ Habilidades del aspirante:', this.habilidades)
+        
       } catch (error) {
-        console.error('Error cargando habilidades:', error)
+        console.error('❌ Error cargando habilidades:', error)
         this.showMessage('Error al cargar las habilidades', 'error')
       } finally {
         this.loading = false
@@ -435,6 +482,8 @@ export default {
     async eliminarHabilidad() {
       try {
         this.eliminando = true
+        console.log('🗑️ Eliminando habilidad:', this.habilidadAEliminar.idHabilidad)
+        
         await aspiranteService.eliminarHabilidad(this.habilidadAEliminar.idHabilidad)
         
         await this.cargarHabilidades()
@@ -443,7 +492,7 @@ export default {
         this.showMessage('Habilidad eliminada exitosamente', 'success')
         
       } catch (error) {
-        console.error('Error eliminando habilidad:', error)
+        console.error('❌ Error eliminando habilidad:', error)
         this.showMessage('Error al eliminar la habilidad', 'error')
       } finally {
         this.eliminando = false
@@ -478,7 +527,15 @@ export default {
     },
     
     async guardarHabilidad() {
-      if (!this.validateForm()) return
+      if (!this.validateForm()) {
+        console.log('❌ Validación fallida, errores:', this.errors)
+        return
+      }
+      
+      if (!this.aspiranteId) {
+        this.showMessage('Error: No se pudo identificar tu perfil de aspirante', 'error')
+        return
+      }
       
       try {
         this.guardando = true
@@ -490,12 +547,19 @@ export default {
           comentario: this.form.comentario || null
         }
         
+        console.log('💾 Guardando habilidad:', habilidadData)
+        console.log('🔄 Editando:', this.editando)
+        
         if (this.editando) {
           habilidadData.idHabilidad = this.form.idHabilidad
-          await aspiranteService.actualizarHabilidad(habilidadData)
+          console.log('📝 Actualizando habilidad existente con ID:', this.form.idHabilidad)
+          const response = await aspiranteService.actualizarHabilidad(habilidadData)
+          console.log('✅ Respuesta actualización:', response)
           this.showMessage('Habilidad actualizada exitosamente', 'success')
         } else {
-          await aspiranteService.crearHabilidad(habilidadData)
+          console.log('🆕 Creando nueva habilidad')
+          const response = await aspiranteService.crearHabilidad(habilidadData)
+          console.log('✅ Respuesta creación:', response)
           this.showMessage('Habilidad agregada exitosamente', 'success')
         }
         
@@ -503,8 +567,29 @@ export default {
         this.cerrarModal()
         
       } catch (error) {
-        console.error('Error guardando habilidad:', error)
-        this.showMessage('Error al guardar la habilidad', 'error')
+        console.error('❌ Error completo guardando habilidad:', error)
+        console.error('❌ Error response:', error.response)
+        console.error('❌ Error data:', error.response?.data)
+        console.error('❌ Error status:', error.response?.status)
+        console.error('❌ Error message:', error.message)
+        
+        // Mensaje de error más específico
+        let errorMessage = 'Error al guardar la habilidad'
+        if (error.response?.status === 400) {
+          errorMessage = `Error de datos: ${error.response.data || 'Datos inválidos'}`
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Error de autenticación. Inicia sesión nuevamente.'
+        } else if (error.response?.status === 403) {
+          errorMessage = 'No tienes permisos para realizar esta acción'
+        } else if (error.response?.status === 404) {
+          errorMessage = 'Endpoint no encontrado. Verifica la configuración de la API.'
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Error del servidor. Contacta al administrador.'
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = 'Error de conexión. Verifica tu internet.'
+        }
+        
+        this.showMessage(errorMessage, 'error')
       } finally {
         this.guardando = false
       }
