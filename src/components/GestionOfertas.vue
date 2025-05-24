@@ -510,69 +510,30 @@ export default {
     },
     
     async cargarOfertas() {
-      if (!this.empresaId) return
-      
-      try {
-        this.loading = true
-        console.log('📋 Cargando ofertas para empresa:', this.empresaId)
-        
-        // TODO: Implementar endpoint real cuando esté disponible
-        // const response = await api.get(`/Ofertas/empresa/${this.empresaId}`)
-        
-        // Por ahora datos simulados
-        this.ofertas = [
-          {
-            idOferta: 1,
-            tituloPuesto: 'Desarrollador Frontend',
-            descripcionPuesto: 'Buscamos un desarrollador frontend con experiencia en Vue.js y React para unirse a nuestro equipo de tecnología. Trabajarás en proyectos innovadores con las últimas tecnologías.',
-            modalidadEmpleo: 'Remoto',
-            ubicacion: 'San Salvador',
-            salarioMinimo: 800,
-            salarioMaximo: 1200,
-            estadoOferta: 'Activa',
-            fechaPublicacion: new Date().toISOString(),
-            fechaCierre: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            aplicaciones: 15
-          },
-          {
-            idOferta: 2,
-            tituloPuesto: 'Contador Público',
-            descripcionPuesto: 'Contador con experiencia en NIIF y manejo de sistemas contables para empresa en crecimiento. Responsable de estados financieros y reportes fiscales.',
-            modalidadEmpleo: 'Presencial',
-            ubicacion: 'Santa Ana',
-            salarioMinimo: 600,
-            salarioMaximo: 800,
-            estadoOferta: 'Activa',
-            fechaPublicacion: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            fechaCierre: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000).toISOString(),
-            aplicaciones: 8
-          },
-          {
-            idOferta: 3,
-            tituloPuesto: 'Diseñador Gráfico',
-            descripcionPuesto: 'Diseñador creativo para campañas publicitarias y branding. Experiencia en Adobe Creative Suite requerida.',
-            modalidadEmpleo: 'Híbrido',
-            ubicacion: 'San Salvador',
-            salarioMinimo: 500,
-            salarioMaximo: 700,
-            estadoOferta: 'Pausada',
-            fechaPublicacion: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            fechaCierre: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000).toISOString(),
-            aplicaciones: 5
-          }
-        ]
-        
-        this.ofertasFiltradas = [...this.ofertas]
-        this.calcularEstadisticas()
-        console.log('✅ Ofertas cargadas:', this.ofertas.length)
-        
-      } catch (error) {
-        console.error('❌ Error cargando ofertas:', error)
-        this.showMessage('Error al cargar las ofertas', 'error')
-      } finally {
-        this.loading = false
-      }
-    },
+  if (!this.empresaId) return;
+
+  try {
+    this.loading = true;
+    console.log('📋 Cargando todas las ofertas para filtrar por empresa:', this.empresaId);
+
+    // Petición real al backend
+    const response = await api.get('/Ofertas/todas');
+
+    // Filtramos solo las ofertas que pertenecen a la empresa actual
+    this.ofertas = response.data.filter(oferta => oferta.idEmpresa === this.empresaId);
+
+    this.ofertasFiltradas = [...this.ofertas];
+    this.calcularEstadisticas();
+    console.log('✅ Ofertas cargadas y filtradas:', this.ofertas.length);
+  } catch (error) {
+    console.error('❌ Error cargando ofertas:', error);
+    this.showMessage('Error al cargar las ofertas desde el servidor', 'error');
+  } finally {
+    this.loading = false;
+  }
+}
+
+,
     
     calcularEstadisticas() {
       this.estadisticas = {
