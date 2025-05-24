@@ -497,7 +497,8 @@ export default {
           fechaPublicacion: this.esEdicion ? this.ofertaAEditar.fechaPublicacion : new Date().toISOString(),
           fechaCierre: new Date(this.form.fechaCierre + 'T23:59:59').toISOString(),
           estadoOferta: this.form.estadoOferta,
-          conocimientoNecesarios: this.form.conocimientosNecesarios || null
+          ConocimientoNecesarios: this.form.conocimientosNecesarios || null
+
         }
         
         if (this.esEdicion) {
@@ -505,7 +506,9 @@ export default {
         }
         
         // Simular guardado exitoso
-        const ofertaGuardada = { ...ofertaData, idOferta: this.form.idOferta || Date.now() }
+        const response = await api.post('/Ofertas/crear', ofertaData)
+        const ofertaGuardada = response.data
+
         
         this.showMessage(
           this.esEdicion 
@@ -522,9 +525,14 @@ export default {
         }, 1500)
         
       } catch (error) {
-        console.error('❌ Error guardando:', error)
-        this.showMessage('Error al guardar la oferta', 'error')
-      } finally {
+  if (error.response) {
+    console.error("❌ Respuesta del backend:", error.response.data);
+  } else {
+    console.error("❌ Error al conectar:", error.message);
+  }
+  this.showMessage('Error al guardar la oferta', 'error');
+}
+ finally {
         this.guardando = false
       }
     },
