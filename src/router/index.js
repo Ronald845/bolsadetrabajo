@@ -36,6 +36,13 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+  path: '/empresa/ofertas',
+  name: 'MisOfertas',
+  component: () => import('@/components/MisOfertas.vue'),
+  meta: { requiresAuth: true }
+},
+
+  {
     path: '/register',
     name: 'Register',
     component: RegisterView,

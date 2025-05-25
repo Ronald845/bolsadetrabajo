@@ -500,14 +500,18 @@ export default {
           ConocimientoNecesarios: this.form.conocimientosNecesarios || null
 
         }
-        
+        let response;
+
         if (this.esEdicion) {
-          ofertaData.idOferta = this.form.idOferta
+          // Asegurarse de agregar el ID si es edición
+          ofertaData.idOferta = this.form.idOferta;
+          response = await api.put('/Ofertas/editar', ofertaData); // Llama al endpoint de editar
+        } else {
+          response = await api.post('/Ofertas/crear', ofertaData); // Llama al endpoint de crear
         }
-        
-        // Simular guardado exitoso
-        const response = await api.post('/Ofertas/crear', ofertaData)
-        const ofertaGuardada = response.data
+
+        const ofertaGuardada = response.data;
+
 
         
         this.showMessage(
@@ -524,17 +528,17 @@ export default {
           this.volverOfertas()
         }, 1500)
         
-      } catch (error) {
-  if (error.response) {
-    console.error("❌ Respuesta del backend:", error.response.data);
-  } else {
-    console.error("❌ Error al conectar:", error.message);
-  }
-  this.showMessage('Error al guardar la oferta', 'error');
-}
- finally {
-        this.guardando = false
-      }
+          } catch (error) {
+            if (error.response) {
+              console.error("❌ Respuesta del backend:", error.response.data);
+            } else {
+              console.error("❌ Error al conectar:", error.message);
+            }
+            this.showMessage('Error al guardar la oferta', 'error');
+          }
+          finally {
+            this.guardando = false
+          }
     },
     
     volverDashboard() {
