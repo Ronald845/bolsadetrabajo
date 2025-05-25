@@ -1,4 +1,5 @@
 <template>
+  <div v-if="!mostrarDetalle">
   <div class="gestion-ofertas">
     <div class="container py-4">
       <!-- Header -->
@@ -407,22 +408,33 @@
       </div>
     </div>
   </div>
+</div>
+<DetalleOferta
+  v-if="mostrarDetalle"
+  :oferta="ofertaSeleccionada"
+  @volver="mostrarDetalle = false"
+/>
+
 </template>
 
 <script>
 import { mapGetters } from 'vuex'
 import FormField from './FormField.vue'
 import api from '../services/api'
+import DetalleOferta from './DetalleOferta.vue'
+
 
 export default {
   name: 'GestionOfertas',
-  components: { FormField },
+  components: { FormField, DetalleOferta },
   emits: ['volver-dashboard', 'crear-oferta', 'editar-oferta', 'ver-aplicaciones'],
   data() {
     return {
       loading: false,
       eliminando: false,
       mostrarConfirmacion: false,
+      mostrarDetalle: false,
+      ofertaSeleccionada: null,
       vistaLista: true,
       message: '',
       messageType: 'success',
@@ -585,9 +597,8 @@ export default {
     },
     
     verOferta(oferta) {
-      console.log('👁️ Viendo oferta:', oferta.tituloPuesto)
-      // TODO: Implementar modal de detalles o navegación
-      this.showMessage(`Viendo detalles de: ${oferta.tituloPuesto}`, 'info')
+    this.ofertaSeleccionada = oferta;
+    this.mostrarDetalle = true;
     },
     
     editarOferta(oferta) {
