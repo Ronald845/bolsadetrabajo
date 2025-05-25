@@ -627,34 +627,31 @@ export default {
     },
     
     async eliminarOferta() {
-      if (!this.ofertaAEliminar) return
-      
-      try {
-        this.eliminando = true
-        console.log('🗑️ Eliminando oferta:', this.ofertaAEliminar.tituloPuesto)
-        
-        // TODO: Implementar endpoint real
-        // await api.delete(`/Ofertas/${this.ofertaAEliminar.idOferta}`)
-        
-        // Simulación local
-        const index = this.ofertas.findIndex(o => o.idOferta === this.ofertaAEliminar.idOferta)
-        if (index > -1) {
-          this.ofertas.splice(index, 1)
-          this.calcularEstadisticas()
-          this.filtrarOfertas()
-        }
-        
-        this.mostrarConfirmacion = false
-        this.ofertaAEliminar = null
-        this.showMessage('Oferta eliminada exitosamente', 'success')
-        
-      } catch (error) {
-        console.error('❌ Error eliminando oferta:', error)
-        this.showMessage('Error al eliminar la oferta', 'error')
-      } finally {
-        this.eliminando = false
-      }
-    },
+  if (!this.ofertaAEliminar) return
+
+  try {
+    this.eliminando = true
+    console.log('🗑️ Eliminando oferta:', this.ofertaAEliminar.tituloPuesto)
+
+    // ✅ Llama al backend real
+    await api.delete(`/Ofertas/eliminar/${this.ofertaAEliminar.idOferta}`)
+
+    // ✅ Elimina localmente de la lista
+    this.ofertas = this.ofertas.filter(o => o.idOferta !== this.ofertaAEliminar.idOferta)
+    this.filtrarOfertas()
+    this.calcularEstadisticas()
+
+    this.showMessage('Oferta eliminada exitosamente', 'success')
+  } catch (error) {
+    console.error('❌ Error eliminando oferta:', error)
+    this.showMessage('Error al eliminar la oferta', 'error')
+  } finally {
+    this.eliminando = false
+    this.mostrarConfirmacion = false
+    this.ofertaAEliminar = null
+  }
+}
+,
     
     formatearSalario(salario) {
       return new Intl.NumberFormat('es-ES').format(salario)
