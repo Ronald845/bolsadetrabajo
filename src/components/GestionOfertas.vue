@@ -612,25 +612,29 @@ export default {
     },
     
     async toggleEstadoOferta(oferta) {
-      try {
-        const nuevoEstado = oferta.estadoOferta === 'Activa' ? 'Pausada' : 'Activa'
-        console.log(`🔄 Cambiando estado de "${oferta.tituloPuesto}" a: ${nuevoEstado}`)
-        
-        // TODO: Implementar endpoint real
-        // await api.put(`/Ofertas/${oferta.idOferta}/estado`, { estado: nuevoEstado })
-        
-        // Simulación local
-        oferta.estadoOferta = nuevoEstado
-        this.calcularEstadisticas()
-        this.filtrarOfertas()
-        
-        this.showMessage(`Oferta ${nuevoEstado.toLowerCase()} exitosamente`, 'success')
-        
-      } catch (error) {
-        console.error('❌ Error cambiando estado:', error)
-        this.showMessage('Error al cambiar el estado de la oferta', 'error')
-      }
-    },
+  try {
+    const nuevoEstado = oferta.estadoOferta === 'Activa' ? 'Pausada' : 'Activa';
+    const confirmacion = confirm(`¿Deseas cambiar el estado a "${nuevoEstado}"?`);
+    if (!confirmacion) return;
+
+    // Copia todos los campos de la oferta y cambia solo el estado
+    const ofertaActualizada = { ...oferta, estadoOferta: nuevoEstado };
+
+    // Llamada al backend
+    await api.put('/Ofertas/editar', ofertaActualizada);
+
+    // Actualizar en la lista local
+    oferta.estadoOferta = nuevoEstado;
+    this.filtrarOfertas();
+    this.calcularEstadisticas();
+
+    this.showMessage(`Oferta ${nuevoEstado.toLowerCase()} exitosamente`, 'success');
+  } catch (error) {
+    console.error('❌ Error cambiando estado:', error);
+    this.showMessage('Error al cambiar el estado de la oferta', 'error');
+  }
+}
+,
     
     confirmarEliminar(oferta) {
       this.ofertaAEliminar = oferta
