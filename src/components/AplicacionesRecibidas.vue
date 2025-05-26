@@ -14,12 +14,10 @@
             </div>
             <div class="d-flex gap-2">
               <button @click="exportarDatos" class="btn btn-outline-success btn-sm">
-                <i class="fas fa-file-excel me-2"></i>
-                Exportar
+                <i class="fas fa-file-excel me-2"></i>Exportar
               </button>
               <button @click="$emit('volver-ofertas')" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left me-2"></i>
-                Mis Ofertas
+                <i class="fas fa-arrow-left me-2"></i>Mis Ofertas
               </button>
             </div>
           </div>
@@ -30,104 +28,31 @@
       <div class="card shadow-sm mb-4">
         <div class="card-body">
           <div class="row g-3">
-            <div class="col-md-3">
-              <FormField
-                v-model="filtros.oferta"
-                type="select"
-                label="Filtrar por Oferta"
-                icon="fas fa-briefcase"
-                :options="ofertasOptions"
-                placeholder="Todas las ofertas"
-              />
-            </div>
-            <div class="col-md-3">
-              <FormField
-                v-model="filtros.estado"
-                type="select"
-                label="Estado"
-                icon="fas fa-filter"
-                :options="estadosOptions"
-                placeholder="Todos los estados"
-              />
-            </div>
-            <div class="col-md-3">
-              <FormField
-                v-model="filtros.fechaDesde"
-                type="date"
-                label="Fecha Desde"
-                icon="fas fa-calendar"
-                :max="fechaHoy"
-              />
-            </div>
-            <div class="col-md-3">
-              <FormField
-                v-model="filtros.fechaHasta"
-                type="date"
-                label="Fecha Hasta"
-                icon="fas fa-calendar"
-                :max="fechaHoy"
-                :min="filtros.fechaDesde"
-              />
+            <div class="col-md-3" v-for="filtro in filtrosConfig" :key="filtro.key">
+              <FormField v-model="filtros[filtro.key]" v-bind="filtro" />
             </div>
           </div>
           <div class="row mt-3">
             <div class="col-md-6">
-              <FormField
-                v-model="filtros.busqueda"
-                label="Buscar Candidato"
-                icon="fas fa-search"
-                placeholder="Nombre, email, puesto..."
-              />
+              <FormField v-model="filtros.busqueda" label="Buscar Candidato" icon="fas fa-search" placeholder="Nombre, email, puesto..." />
             </div>
             <div class="col-md-6 d-flex align-items-end">
               <button @click="limpiarFiltros" class="btn btn-outline-secondary me-2">
-                <i class="fas fa-times me-2"></i>
-                Limpiar
-              </button>
-              <button @click="aplicarFiltros" class="btn btn-primary">
-                <i class="fas fa-filter me-2"></i>
-                Filtrar
+                <i class="fas fa-times me-2"></i>Limpiar
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Estadísticas rápidas -->
+      <!-- Estadísticas -->
       <div class="row mb-4">
-        <div class="col-md-3">
-          <div class="card bg-primary text-white">
+        <div class="col-md-3" v-for="(stat, key) in statsConfig" :key="key">
+          <div class="card text-white" :class="stat.class">
             <div class="card-body text-center">
-              <i class="fas fa-envelope fa-2x mb-2"></i>
-              <h4>{{ estadisticas.total }}</h4>
-              <small>Total Aplicaciones</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card bg-warning text-white">
-            <div class="card-body text-center">
-              <i class="fas fa-clock fa-2x mb-2"></i>
-              <h4>{{ estadisticas.pendientes }}</h4>
-              <small>Pendientes</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card bg-info text-white">
-            <div class="card-body text-center">
-              <i class="fas fa-eye fa-2x mb-2"></i>
-              <h4>{{ estadisticas.revisadas }}</h4>
-              <small>En Revisión</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card bg-success text-white">
-            <div class="card-body text-center">
-              <i class="fas fa-check fa-2x mb-2"></i>
-              <h4>{{ estadisticas.aceptadas }}</h4>
-              <small>Aceptadas</small>
+              <i :class="stat.icon" class="fa-2x mb-2"></i>
+              <h4>{{ estadisticas[key] }}</h4>
+              <small>{{ stat.label }}</small>
             </div>
           </div>
         </div>
@@ -138,21 +63,18 @@
         <div class="card-header bg-white">
           <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
-              <i class="fas fa-list me-2"></i>
-              Aplicaciones ({{ aplicacionesFiltradas.length }})
+              <i class="fas fa-list me-2"></i>Aplicaciones ({{ aplicacionesFiltradas.length }})
             </h5>
-            <div class="d-flex gap-2">
-              <select v-model="vista" class="form-select form-select-sm" style="width: auto;">
-                <option value="tarjetas">Vista Tarjetas</option>
-                <option value="tabla">Vista Tabla</option>
-              </select>
-            </div>
+            <select v-model="vista" class="form-select form-select-sm" style="width: auto;">
+              <option value="tarjetas">Vista Tarjetas</option>
+              <option value="tabla">Vista Tabla</option>
+            </select>
           </div>
         </div>
         <div class="card-body">
           <!-- Loading -->
           <div v-if="loading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
+            <div class="spinner-border text-primary"></div>
             <p class="mt-2">Cargando aplicaciones...</p>
           </div>
 
@@ -161,109 +83,64 @@
             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
             <h5>No hay aplicaciones</h5>
             <p class="text-muted">
-              {{ aplicaciones.length === 0 
-                ? 'Aún no has recibido aplicaciones para tus ofertas.' 
-                : 'No hay aplicaciones que coincidan con los filtros aplicados.' 
-              }}
+              {{ aplicaciones.length === 0 ? 'Aún no has recibido aplicaciones.' : 'No hay aplicaciones que coincidan con los filtros.' }}
             </p>
           </div>
 
           <!-- Vista Tarjetas -->
           <div v-else-if="vista === 'tarjetas'" class="row">
-            <div 
-              v-for="aplicacion in aplicacionesFiltradas" 
-              :key="aplicacion.idAplicacion"
-              class="col-lg-6 col-xl-4 mb-4"
-            >
+            <div v-for="app in aplicacionesFiltradas" :key="app.idAplicacion" class="col-lg-6 col-xl-4 mb-4">
               <div class="card aplicacion-card h-100">
                 <div class="card-body">
-                  <!-- Header de la tarjeta -->
                   <div class="d-flex justify-content-between align-items-start mb-3">
                     <div class="d-flex align-items-center">
                       <div class="avatar-circle me-3">
-                        {{ getIniciales(aplicacion.aspirante?.primerNombre, aplicacion.aspirante?.primerApellido) }}
+                        {{ getIniciales(app.aspirante?.primerNombre, app.aspirante?.primerApellido) }}
                       </div>
                       <div>
-                        <h6 class="mb-1">
-                          {{ aplicacion.aspirante?.primerNombre }} 
-                          {{ aplicacion.aspirante?.primerApellido }}
-                        </h6>
-                        <small class="text-muted">
-                          {{ aplicacion.aspirante?.puestoBusca || 'Profesional' }}
-                        </small>
+                        <h6 class="mb-1">{{ app.aspirante?.primerNombre }} {{ app.aspirante?.primerApellido }}</h6>
+                        <small class="text-muted">{{ app.aspirante?.puestoBusca || 'Profesional' }}</small>
                       </div>
                     </div>
                     <div class="dropdown">
-                      <button 
-                        class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                        type="button" 
-                        :id="`dropdown${aplicacion.idAplicacion}`"
-                        data-bs-toggle="dropdown"
-                      >
+                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                         <i class="fas fa-ellipsis-v"></i>
                       </button>
                       <ul class="dropdown-menu">
-                        <li>
-                          <a class="dropdown-item" href="#" @click.prevent="verPerfil(aplicacion.aspirante)">
-                            <i class="fas fa-user me-2"></i>Ver Perfil
-                          </a>
-                        </li>
-                        <li>
-                          <a class="dropdown-item" href="#" @click.prevent="contactarCandidato(aplicacion)">
-                            <i class="fas fa-envelope me-2"></i>Contactar
-                          </a>
-                        </li>
+                        <li><a class="dropdown-item" href="#" @click.prevent="verPerfil(app.aspirante)">
+                          <i class="fas fa-user me-2"></i>Ver Perfil</a></li>
+                        <li><a class="dropdown-item" href="#" @click.prevent="contactarCandidato(app)">
+                          <i class="fas fa-envelope me-2"></i>Contactar</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li>
-                          <a class="dropdown-item text-danger" href="#" @click.prevent="rechazarAplicacion(aplicacion)">
-                            <i class="fas fa-times me-2"></i>Rechazar
-                          </a>
-                        </li>
+                        <li><a class="dropdown-item text-danger" href="#" @click.prevent="rechazarAplicacion(app)">
+                          <i class="fas fa-times me-2"></i>Rechazar</a></li>
                       </ul>
                     </div>
                   </div>
 
-                  <!-- Información de la oferta -->
                   <div class="mb-3">
                     <div class="d-flex align-items-center mb-2">
                       <i class="fas fa-briefcase text-primary me-2"></i>
-                      <small class="text-primary fw-medium">
-                        {{ aplicacion.oferta?.tituloPuesto }}
-                      </small>
+                      <small class="text-primary fw-medium">{{ app.oferta?.tituloPuesto }}</small>
                     </div>
                     <div class="d-flex align-items-center mb-2">
                       <i class="fas fa-calendar text-muted me-2"></i>
-                      <small class="text-muted">
-                        Aplicó {{ formatFecha(aplicacion.fechaAplicacion) }}
-                      </small>
+                      <small class="text-muted">Aplicó {{ formatFecha(app.fechaAplicacion) }}</small>
                     </div>
                   </div>
 
-                  <!-- Estado -->
                   <div class="mb-3">
-                    <span class="badge" :class="getEstadoClass(aplicacion.estado)">
-                      <i :class="getEstadoIcon(aplicacion.estado)" class="me-1"></i>
-                      {{ aplicacion.estado }}
+                    <span class="badge" :class="getEstadoClass(app.estado)">
+                      <i :class="getEstadoIcon(app.estado)" class="me-1"></i>{{ app.estado }}
                     </span>
                   </div>
 
-                  <!-- Acciones -->
                   <div class="d-flex gap-2">
-                    <button 
-                      v-if="aplicacion.estado === 'Pendiente'"
-                      @click="cambiarEstado(aplicacion, 'En Revisión')"
-                      class="btn btn-sm btn-warning flex-fill"
-                    >
-                      <i class="fas fa-eye me-1"></i>
-                      Revisar
+                    <button v-if="app.estado === 'Pendiente'" @click="cambiarEstado(app, 'En Revisión')" class="btn btn-sm btn-warning flex-fill">
+                      <i class="fas fa-eye me-1"></i>Revisar
                     </button>
-                    <button 
-                      v-if="['Pendiente', 'En Revisión'].includes(aplicacion.estado)"
-                      @click="cambiarEstado(aplicacion, 'Aceptada')"
-                      class="btn btn-sm btn-success flex-fill"
-                    >
-                      <i class="fas fa-check me-1"></i>
-                      Aceptar
+                    <button v-if="['Pendiente', 'En Revisión'].includes(app.estado)" @click="cambiarEstado(app, 'Aceptada')" class="btn btn-sm btn-success flex-fill">
+                      <i class="fas fa-check me-1"></i>Aceptar
                     </button>
                   </div>
                 </div>
@@ -276,89 +153,55 @@
             <table class="table table-hover">
               <thead>
                 <tr>
-                  <th>Candidato</th>
-                  <th>Oferta</th>
-                  <th>Fecha Aplicación</th>
-                  <th>Estado</th>
-                  <th width="150">Acciones</th>
+                  <th v-for="col in tableCols" :key="col.key" :width="col.width">{{ col.label }}</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="aplicacion in aplicacionesFiltradas" :key="aplicacion.idAplicacion">
+                <tr v-for="app in aplicacionesFiltradas" :key="app.idAplicacion">
                   <td>
                     <div class="d-flex align-items-center">
                       <div class="avatar-circle-sm me-2">
-                        {{ getIniciales(aplicacion.aspirante?.primerNombre, aplicacion.aspirante?.primerApellido) }}
+                        {{ getIniciales(app.aspirante?.primerNombre, app.aspirante?.primerApellido) }}
                       </div>
                       <div>
-                        <div class="fw-medium">
-                          {{ aplicacion.aspirante?.primerNombre }} 
-                          {{ aplicacion.aspirante?.primerApellido }}
-                        </div>
-                        <small class="text-muted">
-                          {{ aplicacion.aspirante?.puestoBusca || 'Profesional' }}
-                        </small>
+                        <div class="fw-medium">{{ app.aspirante?.primerNombre }} {{ app.aspirante?.primerApellido }}</div>
+                        <small class="text-muted">{{ app.aspirante?.puestoBusca || 'Profesional' }}</small>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <div class="fw-medium">{{ aplicacion.oferta?.tituloPuesto }}</div>
-                    <small class="text-muted">{{ aplicacion.oferta?.modalidadEmpleo }}</small>
+                    <div class="fw-medium">{{ app.oferta?.tituloPuesto }}</div>
+                    <small class="text-muted">{{ app.oferta?.modalidadEmpleo }}</small>
                   </td>
                   <td>
-                    <div>{{ formatFecha(aplicacion.fechaAplicacion) }}</div>
-                    <small class="text-muted">{{ formatTiempoTranscurrido(aplicacion.fechaAplicacion) }}</small>
+                    <div>{{ formatFecha(app.fechaAplicacion) }}</div>
+                    <small class="text-muted">{{ formatTiempoTranscurrido(app.fechaAplicacion) }}</small>
                   </td>
                   <td>
-                    <span class="badge" :class="getEstadoClass(aplicacion.estado)">
-                      <i :class="getEstadoIcon(aplicacion.estado)" class="me-1"></i>
-                      {{ aplicacion.estado }}
+                    <span class="badge" :class="getEstadoClass(app.estado)">
+                      <i :class="getEstadoIcon(app.estado)" class="me-1"></i>{{ app.estado }}
                     </span>
                   </td>
                   <td>
                     <div class="btn-group btn-group-sm">
-                      <button 
-                        @click="verPerfil(aplicacion.aspirante)"
-                        class="btn btn-outline-primary"
-                        title="Ver perfil"
-                      >
+                      <button @click="verPerfil(app.aspirante)" class="btn btn-outline-primary" title="Ver perfil">
                         <i class="fas fa-user"></i>
                       </button>
-                      <button 
-                        v-if="aplicacion.estado === 'Pendiente'"
-                        @click="cambiarEstado(aplicacion, 'En Revisión')"
-                        class="btn btn-outline-warning"
-                        title="Marcar en revisión"
-                      >
+                      <button v-if="app.estado === 'Pendiente'" @click="cambiarEstado(app, 'En Revisión')" class="btn btn-outline-warning">
                         <i class="fas fa-eye"></i>
                       </button>
-                      <button 
-                        v-if="['Pendiente', 'En Revisión'].includes(aplicacion.estado)"
-                        @click="cambiarEstado(aplicacion, 'Aceptada')"
-                        class="btn btn-outline-success"
-                        title="Aceptar candidato"
-                      >
+                      <button v-if="['Pendiente', 'En Revisión'].includes(app.estado)" @click="cambiarEstado(app, 'Aceptada')" class="btn btn-outline-success">
                         <i class="fas fa-check"></i>
                       </button>
                       <div class="btn-group">
-                        <button 
-                          class="btn btn-outline-secondary dropdown-toggle" 
-                          type="button" 
-                          data-bs-toggle="dropdown"
-                        >
+                        <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                           <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu">
-                          <li>
-                            <a class="dropdown-item" href="#" @click.prevent="contactarCandidato(aplicacion)">
-                              <i class="fas fa-envelope me-2"></i>Contactar
-                            </a>
-                          </li>
-                          <li>
-                            <a class="dropdown-item text-danger" href="#" @click.prevent="rechazarAplicacion(aplicacion)">
-                              <i class="fas fa-times me-2"></i>Rechazar
-                            </a>
-                          </li>
+                          <li><a class="dropdown-item" href="#" @click.prevent="contactarCandidato(app)">
+                            <i class="fas fa-envelope me-2"></i>Contactar</a></li>
+                          <li><a class="dropdown-item text-danger" href="#" @click.prevent="rechazarAplicacion(app)">
+                            <i class="fas fa-times me-2"></i>Rechazar</a></li>
                         </ul>
                       </div>
                     </div>
@@ -371,18 +214,16 @@
       </div>
 
       <!-- Modal Ver Perfil -->
-      <div class="modal fade" :class="{ show: mostrarPerfilModal }" :style="{ display: mostrarPerfilModal ? 'block' : 'none' }" tabindex="-1">
+      <div class="modal fade" :class="{ show: mostrarPerfilModal }" :style="{ display: mostrarPerfilModal ? 'block' : 'none' }">
         <div class="modal-dialog modal-xl">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title">
-                <i class="fas fa-user me-2"></i>
-                Perfil de {{ candidatoSeleccionado?.primerNombre }} {{ candidatoSeleccionado?.primerApellido }}
+                <i class="fas fa-user me-2"></i>Perfil de {{ candidatoSeleccionado?.primerNombre }} {{ candidatoSeleccionado?.primerApellido }}
               </h5>
               <button type="button" class="btn-close" @click="cerrarPerfilModal"></button>
             </div>
             <div class="modal-body">
-              <!-- Contenido del perfil del candidato -->
               <div v-if="candidatoSeleccionado" class="row">
                 <div class="col-md-4">
                   <div class="text-center mb-4">
@@ -396,25 +237,19 @@
                 <div class="col-md-8">
                   <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
-                    <strong>Próximamente:</strong> Vista completa del perfil del candidato con formación, experiencia y habilidades.
+                    <strong>Próximamente:</strong> Vista completa del perfil del candidato.
                   </div>
-                  
-                  <!-- Información básica por ahora -->
                   <div class="card">
-                    <div class="card-header">
-                      <h6 class="mb-0">Información Básica</h6>
-                    </div>
+                    <div class="card-header"><h6 class="mb-0">Información Básica</h6></div>
                     <div class="card-body">
                       <div class="row">
                         <div class="col-sm-6">
-                          <strong>Nombre Completo:</strong><br>
-                          {{ candidatoSeleccionado.primerNombre }} 
-                          {{ candidatoSeleccionado.segundoNombre || '' }}
-                          {{ candidatoSeleccionado.primerApellido }}
-                          {{ candidatoSeleccionado.segundoApellido || '' }}
+                          <strong>Nombre:</strong><br>
+                          {{ candidatoSeleccionado.primerNombre }} {{ candidatoSeleccionado.segundoNombre || '' }}
+                          {{ candidatoSeleccionado.primerApellido }} {{ candidatoSeleccionado.segundoApellido || '' }}
                         </div>
                         <div class="col-sm-6">
-                          <strong>Puesto que Busca:</strong><br>
+                          <strong>Puesto:</strong><br>
                           {{ candidatoSeleccionado.puestoBusca || 'No especificado' }}
                         </div>
                       </div>
@@ -424,12 +259,9 @@
               </div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="cerrarPerfilModal">
-                Cerrar
-              </button>
+              <button type="button" class="btn btn-secondary" @click="cerrarPerfilModal">Cerrar</button>
               <button type="button" class="btn btn-primary" @click="contactarCandidato(aplicacionSeleccionada)">
-                <i class="fas fa-envelope me-2"></i>
-                Contactar Candidato
+                <i class="fas fa-envelope me-2"></i>Contactar
               </button>
             </div>
           </div>
@@ -440,9 +272,8 @@
       <div v-if="mostrarPerfilModal" class="modal-backdrop fade show" @click="cerrarPerfilModal"></div>
 
       <!-- Mensaje -->
-      <div v-if="message" class="alert mt-4" :class="messageClass">
-        <i :class="messageIcon" class="me-2"></i>
-        {{ message }}
+      <div v-if="message" class="alert mt-4" :class="`alert-${messageType}`">
+        <i :class="messageIcon" class="me-2"></i>{{ message }}
       </div>
     </div>
   </div>
@@ -457,38 +288,45 @@ export default {
   name: 'AplicacionesRecibidas',
   components: { FormField },
   emits: ['volver-dashboard', 'volver-ofertas'],
+  
   data() {
     return {
       loading: false,
       message: '',
       messageType: 'success',
-      vista: 'tarjetas', // 'tarjetas' o 'tabla'
-      
+      vista: 'tarjetas',
       aplicaciones: [],
       ofertas: [],
       empresaId: null,
-      
-      // Filtros
-      filtros: {
-        oferta: '',
-        estado: '',
-        fechaDesde: '',
-        fechaHasta: '',
-        busqueda: ''
-      },
-      
-      // Modal
       mostrarPerfilModal: false,
       candidatoSeleccionado: null,
       aplicacionSeleccionada: null,
       
-      // Estados posibles de aplicaciones
-      estadosDisponibles: [
-        'Pendiente',
-        'En Revisión', 
-        'Aceptada',
-        'Rechazada',
-        'Retirada'
+      filtros: {
+        oferta: '', estado: '', fechaDesde: '', fechaHasta: '', busqueda: ''
+      },
+      
+      // Configuraciones estáticas
+      filtrosConfig: [
+        { key: 'oferta', type: 'select', label: 'Filtrar por Oferta', icon: 'fas fa-briefcase', options: [], placeholder: 'Todas las ofertas' },
+        { key: 'estado', type: 'select', label: 'Estado', icon: 'fas fa-filter', options: [], placeholder: 'Todos los estados' },
+        { key: 'fechaDesde', type: 'date', label: 'Fecha Desde', icon: 'fas fa-calendar', max: new Date().toISOString().split('T')[0] },
+        { key: 'fechaHasta', type: 'date', label: 'Fecha Hasta', icon: 'fas fa-calendar', max: new Date().toISOString().split('T')[0] }
+      ],
+      
+      statsConfig: {
+        total: { class: 'bg-primary', icon: 'fas fa-envelope', label: 'Total Aplicaciones' },
+        pendientes: { class: 'bg-warning', icon: 'fas fa-clock', label: 'Pendientes' },
+        revisadas: { class: 'bg-info', icon: 'fas fa-eye', label: 'En Revisión' },
+        aceptadas: { class: 'bg-success', icon: 'fas fa-check', label: 'Aceptadas' }
+      },
+      
+      tableCols: [
+        { key: 'candidato', label: 'Candidato' },
+        { key: 'oferta', label: 'Oferta' },
+        { key: 'fecha', label: 'Fecha Aplicación' },
+        { key: 'estado', label: 'Estado' },
+        { key: 'acciones', label: 'Acciones', width: '150' }
       ]
     }
   },
@@ -496,137 +334,51 @@ export default {
   computed: {
     ...mapGetters(['user']),
     
-    fechaHoy() {
-      return new Date().toISOString().split('T')[0]
-    },
-    
-    ofertasOptions() {
-      return this.ofertas.map(oferta => ({
-        value: oferta.idOferta,
-        label: oferta.tituloPuesto
-      }))
-    },
-    
-    estadosOptions() {
-      return this.estadosDisponibles.map(estado => ({
-        value: estado,
-        label: estado
-      }))
-    },
-    
     aplicacionesFiltradas() {
-      return this.aplicaciones.filter(aplicacion => {
-        // Filtro por oferta
-        if (this.filtros.oferta && aplicacion.idOferta !== parseInt(this.filtros.oferta)) {
-          return false
-        }
-        
-        // Filtro por estado
-        if (this.filtros.estado && aplicacion.estado !== this.filtros.estado) {
-          return false
-        }
-        
-        // Filtro por fecha desde
-        if (this.filtros.fechaDesde) {
-          const fechaAplicacion = new Date(aplicacion.fechaAplicacion)
-          const fechaDesde = new Date(this.filtros.fechaDesde)
-          if (fechaAplicacion < fechaDesde) return false
-        }
-        
-        // Filtro por fecha hasta
-        if (this.filtros.fechaHasta) {
-          const fechaAplicacion = new Date(aplicacion.fechaAplicacion)
-          const fechaHasta = new Date(this.filtros.fechaHasta)
-          if (fechaAplicacion > fechaHasta) return false
-        }
-        
-        // Filtro por búsqueda
+      return this.aplicaciones.filter(app => {
+        if (this.filtros.oferta && app.idOferta !== parseInt(this.filtros.oferta)) return false
+        if (this.filtros.estado && app.estado !== this.filtros.estado) return false
+        if (this.filtros.fechaDesde && new Date(app.fechaAplicacion) < new Date(this.filtros.fechaDesde)) return false
+        if (this.filtros.fechaHasta && new Date(app.fechaAplicacion) > new Date(this.filtros.fechaHasta)) return false
         if (this.filtros.busqueda) {
           const busqueda = this.filtros.busqueda.toLowerCase()
-          const nombreCompleto = `${aplicacion.aspirante?.primerNombre} ${aplicacion.aspirante?.primerApellido}`.toLowerCase()
-          const puesto = (aplicacion.aspirante?.puestoBusca || '').toLowerCase()
-          const tituloOferta = (aplicacion.oferta?.tituloPuesto || '').toLowerCase()
-          
-          return nombreCompleto.includes(busqueda) || 
-                 puesto.includes(busqueda) || 
-                 tituloOferta.includes(busqueda)
+          const texto = `${app.aspirante?.primerNombre} ${app.aspirante?.primerApellido} ${app.aspirante?.puestoBusca} ${app.oferta?.tituloPuesto}`.toLowerCase()
+          return texto.includes(busqueda)
         }
-        
         return true
       })
     },
     
     estadisticas() {
-      const stats = {
-        total: this.aplicaciones.length,
-        pendientes: 0,
-        revisadas: 0,
-        aceptadas: 0,
-        rechazadas: 0
-      }
-      
-      this.aplicaciones.forEach(app => {
-        switch(app.estado) {
-          case 'Pendiente':
-            stats.pendientes++
-            break
-          case 'En Revisión':
-            stats.revisadas++
-            break
-          case 'Aceptada':
-            stats.aceptadas++
-            break
-          case 'Rechazada':
-            stats.rechazadas++
-            break
-        }
-      })
-      
-      return stats
-    },
-    
-    messageClass() {
-      return `alert-${this.messageType}`
+      return this.aplicaciones.reduce((acc, app) => {
+        acc.total++
+        if (app.estado === 'Pendiente') acc.pendientes++
+        else if (app.estado === 'En Revisión') acc.revisadas++
+        else if (app.estado === 'Aceptada') acc.aceptadas++
+        return acc
+      }, { total: 0, pendientes: 0, revisadas: 0, aceptadas: 0 })
     },
     
     messageIcon() {
-      const icons = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle'
-      }
+      const icons = { success: 'fas fa-check-circle', error: 'fas fa-exclamation-circle', warning: 'fas fa-exclamation-triangle' }
       return icons[this.messageType] || 'fas fa-info-circle'
     }
   },
   
   async mounted() {
-    console.log('👥 AplicacionesRecibidas montado')
     await this.cargarEmpresaId()
-    if (this.empresaId) {
-      await this.cargarDatos()
-    }
+    if (this.empresaId) await this.cargarDatos()
+    this.configurarOpciones()
   },
   
   methods: {
     async cargarEmpresaId() {
       try {
-        console.log('🔍 Buscando empresa para usuario:', this.user?.idUsuario)
-        
         const response = await api.get('/Empresa/todas')
-        console.log('🏢 Empresas encontradas:', response.data)
-        
-        const empresaActual = response.data.find(emp => emp.idUsuario === this.user.idUsuario)
-        
-        if (empresaActual) {
-          this.empresaId = empresaActual.idEmpresa
-          console.log('✅ Empresa ID encontrado:', this.empresaId)
-        } else {
-          console.log('❌ No se encontró empresa para el usuario:', this.user?.idUsuario)
-          this.showMessage('No se encontró tu perfil de empresa. Contacta al administrador.', 'error')
-        }
-        
+        const empresa = response.data.find(emp => emp.idUsuario === this.user.idUsuario)
+        this.empresaId = empresa?.idEmpresa
+        if (!this.empresaId) this.showMessage('No se encontró tu perfil de empresa', 'error')
       } catch (error) {
-        console.error('❌ Error obteniendo ID de empresa:', error)
         this.showMessage('Error al cargar tu perfil de empresa', 'error')
       }
     },
@@ -634,15 +386,8 @@ export default {
     async cargarDatos() {
       try {
         this.loading = true
-        console.log('📋 Cargando datos para empresa:', this.empresaId)
-        
-        await Promise.all([
-          this.cargarOfertas(),
-          this.cargarAplicaciones()
-        ])
-        
+        await Promise.all([this.cargarOfertas(), this.cargarAplicaciones()])
       } catch (error) {
-        console.error('❌ Error cargando datos:', error)
         this.showMessage('Error al cargar los datos', 'error')
       } finally {
         this.loading = false
@@ -650,80 +395,46 @@ export default {
     },
     
     async cargarOfertas() {
-      try {
-        const response = await api.get('/Ofertas/todas')
-        // Filtrar solo las ofertas de la empresa actual
-        this.ofertas = response.data.filter(oferta => oferta.idEmpresa === this.empresaId)
-        console.log('💼 Ofertas de la empresa:', this.ofertas)
-        
-      } catch (error) {
-        console.error('❌ Error cargando ofertas:', error)
-      }
+      const response = await api.get('/Ofertas/todas')
+      this.ofertas = response.data.filter(oferta => oferta.idEmpresa === this.empresaId)
     },
     
     async cargarAplicaciones() {
-      try {
-        const response = await api.get('/Aplicaciones/todos')
-        console.log('📨 Todas las aplicaciones:', response.data)
-        
-        // Filtrar aplicaciones para las ofertas de esta empresa
-        const ofertasIds = this.ofertas.map(o => o.idOferta)
-        let aplicacionesEmpresa = response.data.filter(app => ofertasIds.includes(app.idOferta))
-        
-        // Enriquecer aplicaciones con datos de ofertas y aspirantes
-        for (let aplicacion of aplicacionesEmpresa) {
-          // Agregar datos de la oferta
-          aplicacion.oferta = this.ofertas.find(o => o.idOferta === aplicacion.idOferta)
-          
-          // Agregar datos del aspirante
-          try {
-            const aspiranteResponse = await api.get(`/Aspirante/${aplicacion.idAspirante}`)
-            aplicacion.aspirante = aspiranteResponse.data
-          } catch (error) {
-            console.warn(`⚠️ No se pudo cargar aspirante ${aplicacion.idAspirante}:`, error)
-            aplicacion.aspirante = {
-              primerNombre: 'Usuario',
-              primerApellido: 'Desconocido',
-              puestoBusca: 'No especificado'
-            }
-          }
+      const response = await api.get('/Aplicaciones/todos')
+      const ofertasIds = this.ofertas.map(o => o.idOferta)
+      let aplicacionesEmpresa = response.data.filter(app => ofertasIds.includes(app.idOferta))
+      
+      for (let app of aplicacionesEmpresa) {
+        app.oferta = this.ofertas.find(o => o.idOferta === app.idOferta)
+        try {
+          const aspiranteResponse = await api.get(`/Aspirante/${app.idAspirante}`)
+          app.aspirante = aspiranteResponse.data
+        } catch {
+          app.aspirante = { primerNombre: 'Usuario', primerApellido: 'Desconocido', puestoBusca: 'No especificado' }
         }
-        
-        this.aplicaciones = aplicacionesEmpresa
-        console.log('✅ Aplicaciones procesadas:', this.aplicaciones)
-        
-      } catch (error) {
-        console.error('❌ Error cargando aplicaciones:', error)
       }
+      this.aplicaciones = aplicacionesEmpresa
     },
     
-    async cambiarEstado(aplicacion, nuevoEstado) {
+    configurarOpciones() {
+      this.filtrosConfig[0].options = this.ofertas.map(o => ({ value: o.idOferta, label: o.tituloPuesto }))
+      this.filtrosConfig[1].options = ['Pendiente', 'En Revisión', 'Aceptada', 'Rechazada', 'Retirada'].map(e => ({ value: e, label: e }))
+    },
+    
+    async cambiarEstado(app, nuevoEstado) {
       try {
-        console.log(`📝 Cambiando estado de aplicación ${aplicacion.idAplicacion} a ${nuevoEstado}`)
-        
-        const aplicacionData = {
-          idAplicacion: aplicacion.idAplicacion,
-          idOferta: aplicacion.idOferta,
-          idAspirante: aplicacion.idAspirante,
-          fechaAplicacion: aplicacion.fechaAplicacion,
-          estado: nuevoEstado
-        }
-        
-        await api.put('/Aplicaciones/editar', aplicacionData)
-        
-        // Actualizar localmente
-        aplicacion.estado = nuevoEstado
-        
+        await api.put('/Aplicaciones/editar', {
+          idAplicacion: app.idAplicacion, idOferta: app.idOferta, idAspirante: app.idAspirante,
+          fechaAplicacion: app.fechaAplicacion, estado: nuevoEstado
+        })
+        app.estado = nuevoEstado
         this.showMessage(`Aplicación marcada como ${nuevoEstado}`, 'success')
-        
-      } catch (error) {
-        console.error('❌ Error cambiando estado:', error)
-        this.showMessage('Error al cambiar el estado de la aplicación', 'error')
+      } catch {
+        this.showMessage('Error al cambiar el estado', 'error')
       }
     },
     
     verPerfil(aspirante) {
-      console.log('👤 Viendo perfil de:', aspirante)
       this.candidatoSeleccionado = aspirante
       this.mostrarPerfilModal = true
     },
@@ -731,102 +442,56 @@ export default {
     cerrarPerfilModal() {
       this.mostrarPerfilModal = false
       this.candidatoSeleccionado = null
-      this.aplicacionSeleccionada = null
     },
     
-    contactarCandidato(aplicacion) {
-      console.log('📧 Contactando candidato:', aplicacion.aspirante)
-      // TODO: Implementar sistema de mensajería o abrir cliente de email
+    contactarCandidato() {
       this.showMessage('Función de contacto será implementada próximamente', 'warning')
     },
     
-    async rechazarAplicacion(aplicacion) {
-      if (confirm(`¿Estás seguro de rechazar la aplicación de ${aplicacion.aspirante?.primerNombre} ${aplicacion.aspirante?.primerApellido}?`)) {
-        await this.cambiarEstado(aplicacion, 'Rechazada')
+    async rechazarAplicacion(app) {
+      if (confirm(`¿Rechazar aplicación de ${app.aspirante?.primerNombre}?`)) {
+        await this.cambiarEstado(app, 'Rechazada')
       }
-    },
-    
-    aplicarFiltros() {
-      console.log('🔍 Aplicando filtros:', this.filtros)
-      // Los filtros se aplican automáticamente via computed property
     },
     
     limpiarFiltros() {
-      this.filtros = {
-        oferta: '',
-        estado: '',
-        fechaDesde: '',
-        fechaHasta: '',
-        busqueda: ''
-      }
-      console.log('🧹 Filtros limpiados')
+      this.filtros = { oferta: '', estado: '', fechaDesde: '', fechaHasta: '', busqueda: '' }
     },
     
     exportarDatos() {
-      console.log('📊 Exportando datos...')
-      // TODO: Implementar exportación a Excel
       this.showMessage('Función de exportación será implementada próximamente', 'warning')
     },
     
     // Utilidades
     getIniciales(nombre, apellido) {
-      const n = (nombre || '').charAt(0).toUpperCase()
-      const a = (apellido || '').charAt(0).toUpperCase()
-      return n + a || 'NN'
+      return ((nombre || '').charAt(0) + (apellido || '').charAt(0)).toUpperCase() || 'NN'
     },
     
     formatFecha(fecha) {
-      if (!fecha) return ''
-      const date = new Date(fecha)
-      return date.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
+      return fecha ? new Date(fecha).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' }) : ''
     },
     
     formatTiempoTranscurrido(fecha) {
       if (!fecha) return ''
-      
-      const ahora = new Date()
-      const fechaAplicacion = new Date(fecha)
-      const diffTime = Math.abs(ahora - fechaAplicacion)
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      
-      if (diffDays === 1) {
-        return 'Hace 1 día'
-      } else if (diffDays < 7) {
-        return `Hace ${diffDays} días`
-      } else if (diffDays < 30) {
-        const semanas = Math.floor(diffDays / 7)
-        return `Hace ${semanas} semana${semanas > 1 ? 's' : ''}`
-      } else if (diffDays < 365) {
-        const meses = Math.floor(diffDays / 30)
-        return `Hace ${meses} mes${meses > 1 ? 'es' : ''}`
-      } else {
-        const años = Math.floor(diffDays / 365)
-        return `Hace ${años} año${años > 1 ? 's' : ''}`
-      }
+      const dias = Math.ceil((new Date() - new Date(fecha)) / (1000 * 60 * 60 * 24))
+      if (dias === 1) return 'Hace 1 día'
+      if (dias < 7) return `Hace ${dias} días`
+      if (dias < 30) return `Hace ${Math.floor(dias / 7)} semana${Math.floor(dias / 7) > 1 ? 's' : ''}`
+      return `Hace ${Math.floor(dias / 30)} mes${Math.floor(dias / 30) > 1 ? 'es' : ''}`
     },
     
     getEstadoClass(estado) {
       const clases = {
-        'Pendiente': 'bg-warning text-dark',
-        'En Revisión': 'bg-info text-white',
-        'Aceptada': 'bg-success text-white',
-        'Rechazada': 'bg-danger text-white',
-        'Retirada': 'bg-secondary text-white'
+        'Pendiente': 'bg-warning text-dark', 'En Revisión': 'bg-info text-white',
+        'Aceptada': 'bg-success text-white', 'Rechazada': 'bg-danger text-white', 'Retirada': 'bg-secondary text-white'
       }
       return clases[estado] || 'bg-secondary text-white'
     },
     
     getEstadoIcon(estado) {
       const iconos = {
-        'Pendiente': 'fas fa-clock',
-        'En Revisión': 'fas fa-eye',
-        'Aceptada': 'fas fa-check',
-        'Rechazada': 'fas fa-times',
-        'Retirada': 'fas fa-arrow-left'
+        'Pendiente': 'fas fa-clock', 'En Revisión': 'fas fa-eye', 'Aceptada': 'fas fa-check',
+        'Rechazada': 'fas fa-times', 'Retirada': 'fas fa-arrow-left'
       }
       return iconos[estado] || 'fas fa-question'
     },
@@ -841,300 +506,42 @@ export default {
 </script>
 
 <style scoped>
-.aplicaciones-recibidas {
-  background: linear-gradient(135deg, #f8f9fc 0%, #e9ecef 100%);
-  min-height: 100vh;
+.aplicaciones-recibidas { background: linear-gradient(135deg, #f8f9fc 0%, #e9ecef 100%); min-height: 100vh; }
+.card { border: none; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15); }
+.aplicacion-card { border-left: 4px solid #007bff; }
+.aplicacion-card:hover { border-left-color: #0056b3; transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0, 123, 255, 0.15); }
+
+.avatar-circle, .avatar-circle-sm, .avatar-circle-lg {
+  border-radius: 50%; background: linear-gradient(135deg, #007bff, #0056b3); color: white;
+  display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;
+}
+.avatar-circle { width: 50px; height: 50px; font-size: 1.1rem; }
+.avatar-circle-sm { width: 35px; height: 35px; font-size: 0.8rem; }
+.avatar-circle-lg { width: 80px; height: 80px; font-size: 1.8rem; }
+
+.card.bg-primary, .card.bg-warning, .card.bg-info, .card.bg-success { transition: all 0.3s ease; }
+.card.bg-primary:hover, .card.bg-warning:hover, .card.bg-info:hover, .card.bg-success:hover {
+  transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Cards y Tarjetas */
-.card {
-  border: none;
-  border-radius: 15px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+.badge { font-size: 0.75rem; padding: 0.4em 0.65em; font-weight: 500; border-radius: 8px; }
+.btn { border-radius: 8px; font-weight: 500; transition: all 0.2s ease; }
+.btn:hover { transform: translateY(-1px); }
 
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15);
-}
+.table th { background-color: #f8f9fa; border: none; font-weight: 600; color: #495057; padding: 1rem 0.75rem; }
+.table td { border: none; padding: 1rem 0.75rem; vertical-align: middle; }
+.table tbody tr { border-bottom: 1px solid #e9ecef; transition: background-color 0.2s ease; }
+.table tbody tr:hover { background-color: #f8f9fc; }
 
-.aplicacion-card {
-  border-left: 4px solid #007bff;
-  transition: all 0.3s ease;
-}
+.modal-content { border-radius: 15px; border: none; }
+.modal-header { border-bottom: 1px solid #e5e7eb; background: linear-gradient(135deg, #f8f9fc, #e9ecef); }
+.dropdown-menu { border-radius: 10px; border: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.dropdown-item { border-radius: 5px; margin: 0.125rem; transition: all 0.2s ease; }
+.dropdown-item:hover { background-color: #f3f4f6; transform: translateX(2px); }
 
-.aplicacion-card:hover {
-  border-left-color: #0056b3;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 20px rgba(0, 123, 255, 0.15);
-}
-
-/* Avatares */
-.avatar-circle {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
-.avatar-circle-sm {
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 0.8rem;
-  flex-shrink: 0;
-}
-
-.avatar-circle-lg {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 1.8rem;
-}
-
-/* Estadísticas */
-.card.bg-primary,
-.card.bg-warning,
-.card.bg-info,
-.card.bg-success {
-  transition: all 0.3s ease;
-}
-
-.card.bg-primary:hover,
-.card.bg-warning:hover,
-.card.bg-info:hover,
-.card.bg-success:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-}
-
-/* Badges */
-.badge {
-  font-size: 0.75rem;
-  padding: 0.4em 0.65em;
-  font-weight: 500;
-  border-radius: 8px;
-}
-
-/* Botones */
-.btn {
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
-.btn-group .btn {
-  border-radius: 0;
-}
-
-.btn-group .btn:first-child {
-  border-radius: 8px 0 0 8px;
-}
-
-.btn-group .btn:last-child {
-  border-radius: 0 8px 8px 0;
-}
-
-/* Tabla */
-.table {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.table th {
-  background-color: #f8f9fa;
-  border: none;
-  font-weight: 600;
-  color: #495057;
-  padding: 1rem 0.75rem;
-}
-
-.table td {
-  border: none;
-  padding: 1rem 0.75rem;
-  vertical-align: middle;
-}
-
-.table tbody tr {
-  border-bottom: 1px solid #e9ecef;
-  transition: background-color 0.2s ease;
-}
-
-.table tbody tr:hover {
-  background-color: #f8f9fc;
-}
-
-/* Modal */
-.modal.show {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  border-radius: 15px;
-  border: none;
-}
-
-.modal-header {
-  border-bottom: 1px solid #e5e7eb;
-  border-radius: 15px 15px 0 0;
-  background: linear-gradient(135deg, #f8f9fc, #e9ecef);
-}
-
-.modal-footer {
-  border-top: 1px solid #e5e7eb;
-  border-radius: 0 0 15px 15px;
-}
-
-/* Filtros */
-.card-body {
-  padding: 1.5rem;
-}
-
-/* Dropdowns */
-.dropdown-menu {
-  border-radius: 10px;
-  border: none;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.dropdown-item {
-  border-radius: 5px;
-  margin: 0.125rem;
-  transition: all 0.2s ease;
-}
-
-.dropdown-item:hover {
-  background-color: #f3f4f6;
-  transform: translateX(2px);
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-  .aplicacion-card {
-    margin-bottom: 1rem;
-  }
-  
-  .avatar-circle {
-    width: 40px;
-    height: 40px;
-    font-size: 0.9rem;
-  }
-  
-  .btn-group .btn {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.8rem;
-  }
-  
-  .table-responsive {
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .avatar-circle-sm {
-    width: 30px;
-    height: 30px;
-    font-size: 0.7rem;
-  }
-  
-  .btn-group {
-    flex-direction: column;
-  }
-  
-  .btn-group .btn {
-    border-radius: 8px !important;
-    margin-bottom: 0.25rem;
-  }
-}
-
-/* Animaciones */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.aplicacion-card {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-/* Estados específicos */
-.badge.bg-warning {
-  background-color: #ffc107 !important;
-  color: #000 !important;
-}
-
-.badge.bg-info {
-  background-color: #17a2b8 !important;
-}
-
-.badge.bg-success {
-  background-color: #28a745 !important;
-}
-
-.badge.bg-danger {
-  background-color: #dc3545 !important;
-}
-
-.badge.bg-secondary {
-  background-color: #6c757d !important;
-}
-
-/* Efectos hover para las tarjetas de estadísticas */
-.card.bg-primary { background: linear-gradient(135deg, #007bff, #0056b3) !important; }
-.card.bg-warning { background: linear-gradient(135deg, #ffc107, #e0a800) !important; }
-.card.bg-info { background: linear-gradient(135deg, #17a2b8, #138496) !important; }
-.card.bg-success { background: linear-gradient(135deg, #28a745, #1e7e34) !important; }
-
-/* Gap utility para espaciado */
-.gap-2 {
-  gap: 0.5rem;
-}
-
-/* Form select personalizado */
-.form-select {
-  border-radius: 8px;
-  border: 1px solid #ced4da;
-  transition: all 0.2s ease;
-}
-
-.form-select:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-/* Loader */
-.spinner-border {
-  width: 3rem;
-  height: 3rem;
+  .avatar-circle { width: 40px; height: 40px; font-size: 0.9rem; }
+  .btn-group .btn { padding: 0.375rem 0.5rem; font-size: 0.8rem; }
 }
 </style>

@@ -12,206 +12,72 @@
         </div>
       </div>
 
-      <!-- Información de la Empresa -->
-      <div class="card shadow-sm mb-4">
+      <!-- Secciones dinámicas -->
+      <div v-for="section in sections" :key="section.id" class="card shadow-sm mb-4">
         <div class="card-header bg-white">
           <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
-              <i class="fas fa-building me-2 text-primary"></i>
-              Información de la Empresa
+              <i :class="`${section.icon} me-2 text-${section.color}`"></i>
+              {{ section.title }}
             </h5>
-            <button
-              v-if="!editMode"
-              @click="enableEdit"
-              class="btn btn-primary btn-sm"
+            <button 
+              v-if="!section.editMode" 
+              @click="toggleEdit(section.id)"
+              :class="`btn btn-${section.color} btn-sm`"
             >
               <i class="fas fa-edit me-2"></i>
               Editar
             </button>
           </div>
         </div>
+
         <div class="card-body">
-          <form @submit.prevent="guardarPerfil">
+          <form @submit.prevent="saveSection(section.id)">
             <div class="row">
-              <div class="col-md-6">
+              <div 
+                v-for="field in section.fields" 
+                :key="field.key"
+                :class="`col-md-${field.col || 12}`"
+              >
                 <FormField
-                  v-model="form.nombreEmpresa"
-                  label="Nombre de la Empresa"
-                  icon="fas fa-building"
-                  placeholder="Nombre oficial de la empresa"
-                  :required="true"
-                  :readonly="!editMode"
-                  :error="errors.nombreEmpresa"
-                  help-text="Máximo 50 caracteres"
-                />
-              </div>
-              <div class="col-md-6">
-                <FormField
-                  v-model="form.nombreRepresentante"
-                  label="Nombre del Representante"
-                  icon="fas fa-user-tie"
-                  placeholder="Nombre del representante legal"
-                  :required="true"
-                  :readonly="!editMode"
-                  :error="errors.nombreRepresentante"
-                  help-text="Máximo 60 caracteres"
-                />
-              </div>
-              <div class="col-12">
-                <FormField
-                  v-model="form.descripcionEmpresa"
-                  type="textarea"
-                  label="Descripción de la Empresa"
-                  icon="fas fa-info-circle"
-                  placeholder="Describe tu empresa, sector, servicios, valores..."
-                  :readonly="!editMode"
-                  :rows="4"
-                  help-text="Opcional - Ayuda a los candidatos a conocer mejor tu empresa"
+                  v-model="section.data[field.key]"
+                  :type="field.type || 'text'"
+                  :label="field.label"
+                  :icon="field.icon"
+                  :placeholder="field.placeholder || `Tu ${field.label.toLowerCase()}`"
+                  :required="field.required"
+                  :readonly="!section.editMode"
+                  :disabled="field.disabled && !section.editMode"
+                  :options="field.options"
+                  :rows="field.rows"
+                  :error="errors[field.key]"
+                  :help-text="field.helpText"
                 />
               </div>
             </div>
             
-            <div v-if="editMode" class="d-flex justify-content-end gap-2 mt-3">
-              <button type="button" @click="cancelarEdicion" class="btn btn-secondary">
+            <div v-if="section.editMode" class="d-flex justify-content-end gap-2 mt-3">
+              <button 
+                type="button" 
+                @click="cancelEdit(section.id)" 
+                class="btn btn-secondary btn-sm"
+              >
                 Cancelar
               </button>
-              <button type="submit" class="btn btn-primary" :disabled="loading">
-                <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                {{ loading ? 'Guardando...' : 'Guardar' }}
+              <button 
+                type="submit" 
+                :class="`btn btn-${section.color} btn-sm`"
+                :disabled="section.loading"
+              >
+                <span v-if="section.loading" class="spinner-border spinner-border-sm me-2"></span>
+                {{ section.loading ? 'Guardando...' : 'Guardar' }}
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- Información de Contacto -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fas fa-phone me-2 text-success"></i>
-              Información de Contacto
-            </h5>
-            <button
-              v-if="!editContacto"
-              @click="editContacto = true"
-              class="btn btn-success btn-sm"
-            >
-              <i class="fas fa-edit me-2"></i>
-              Editar
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <FormField
-                v-model="contacto.telefonoPersonal"
-                type="tel"
-                label="Teléfono Principal"
-                icon="fas fa-mobile-alt"
-                placeholder="0000-0000"
-                :required="true"
-                :readonly="!editContacto"
-                :error="errors.telefonoPersonal"
-                help-text="Teléfono principal de la empresa"
-              />
-            </div>
-            <div class="col-md-6">
-              <FormField
-                v-model="contacto.telefonoFijo"
-                type="tel"
-                label="Teléfono Secundario"
-                icon="fas fa-phone"
-                placeholder="0000-0000"
-                :readonly="!editContacto"
-                help-text="Teléfono alternativo (opcional)"
-              />
-            </div>
-          </div>
-          
-          <div v-if="editContacto" class="d-flex justify-content-end gap-2">
-            <button @click="cancelarEdicionContacto" class="btn btn-secondary btn-sm">
-              Cancelar
-            </button>
-            <button @click="guardarContacto" class="btn btn-success btn-sm" :disabled="loadingContacto">
-              <span v-if="loadingContacto" class="spinner-border spinner-border-sm me-2"></span>
-              {{ loadingContacto ? 'Guardando...' : 'Guardar' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Dirección -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fas fa-map-marker-alt me-2 text-warning"></i>
-              Ubicación de la Empresa
-            </h5>
-            <button
-              v-if="!editDireccion"
-              @click="editDireccion = true"
-              class="btn btn-warning btn-sm"
-            >
-              <i class="fas fa-edit me-2"></i>
-              Editar
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-4">
-              <FormField
-                v-model="direccion.departamento"
-                type="select"
-                label="Departamento"
-                icon="fas fa-map"
-                placeholder="Selecciona departamento"
-                :options="departamentosOptions"
-                :disabled="!editDireccion"
-                :error="errors.departamento"
-              />
-            </div>
-            <div class="col-md-4">
-              <FormField
-                v-model="direccion.municipio"
-                label="Municipio"
-                icon="fas fa-city"
-                placeholder="Municipio de la empresa"
-                :readonly="!editDireccion"
-                :error="errors.municipio"
-              />
-            </div>
-            <div class="col-md-4">
-              <FormField
-                v-model="direccion.detalleDireccion"
-                type="textarea"
-                label="Dirección Detallada"
-                icon="fas fa-building"
-                placeholder="Colonia, avenida, edificio, local..."
-                :readonly="!editDireccion"
-                :rows="2"
-                :error="errors.detalleDireccion"
-                help-text="Dirección completa de las oficinas"
-              />
-            </div>
-          </div>
-          
-          <div v-if="editDireccion" class="d-flex justify-content-end gap-2 mt-3">
-            <button @click="cancelarEdicionDireccion" class="btn btn-secondary btn-sm">
-              Cancelar
-            </button>
-            <button @click="guardarDireccion" class="btn btn-warning btn-sm" :disabled="loadingDireccion">
-              <span v-if="loadingDireccion" class="spinner-border spinner-border-sm me-2"></span>
-              {{ loadingDireccion ? 'Guardando...' : 'Guardar' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Estadísticas de la Empresa (Solo lectura) -->
+      <!-- Estadísticas de la Empresa -->
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-white">
           <h5 class="mb-0">
@@ -221,47 +87,18 @@
         </div>
         <div class="card-body">
           <div class="row text-center">
-            <div class="col-md-3">
+            <div 
+              v-for="stat in estadisticasConfig" 
+              :key="stat.key" 
+              class="col-md-3"
+            >
               <div class="stat-card">
-                <div class="stat-icon bg-primary">
-                  <i class="fas fa-briefcase"></i>
+                <div :class="`stat-icon bg-${stat.color}`">
+                  <i :class="stat.icon"></i>
                 </div>
                 <div class="stat-content">
-                  <h4 class="stat-number">{{ estadisticas.totalOfertas }}</h4>
-                  <p class="stat-label">Ofertas Publicadas</p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-icon bg-success">
-                  <i class="fas fa-eye"></i>
-                </div>
-                <div class="stat-content">
-                  <h4 class="stat-number">{{ estadisticas.ofertasActivas }}</h4>
-                  <p class="stat-label">Ofertas Activas</p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-icon bg-warning">
-                  <i class="fas fa-users"></i>
-                </div>
-                <div class="stat-content">
-                  <h4 class="stat-number">{{ estadisticas.totalAplicaciones }}</h4>
-                  <p class="stat-label">Aplicaciones Recibidas</p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-icon bg-info">
-                  <i class="fas fa-calendar"></i>
-                </div>
-                <div class="stat-content">
-                  <h4 class="stat-number">{{ calcularTiempoEnPlataforma() }}</h4>
-                  <p class="stat-label">Tiempo en Plataforma</p>
+                  <h4 class="stat-number">{{ getStatValue(stat.key) }}</h4>
+                  <p class="stat-label">{{ stat.label }}</p>
                 </div>
               </div>
             </div>
@@ -269,10 +106,11 @@
         </div>
       </div>
 
-      <!-- Mensaje -->
-      <div v-if="message" class="alert" :class="messageClass">
+      <!-- Mensaje global -->
+      <div v-if="message" :class="messageClass" class="alert alert-dismissible fade show">
         <i :class="messageIcon" class="me-2"></i>
         {{ message }}
+        <button type="button" class="btn-close" @click="message = ''"></button>
       </div>
     </div>
   </div>
@@ -288,37 +126,142 @@ import api from '../services/api'
 export default {
   name: 'PerfilEmpresa',
   components: { FormField },
+  
   data() {
     return {
-      editMode: false,
-      editContacto: false,
-      editDireccion: false,
-      loading: false,
-      loadingContacto: false,
-      loadingDireccion: false,
       message: '',
       messageType: 'success',
+      errors: {},
       
-      form: {
-        idEmpresa: null,
-        idUsuario: null,
-        nombreEmpresa: '',
-        nombreRepresentante: '',
-        descripcionEmpresa: ''
-      },
-      
-      contacto: {
-        idUsuario: null,
-        telefonoPersonal: '',
-        telefonoFijo: ''
-      },
-      
-      direccion: {
-        idUsuario: null,
-        departamento: '',
-        municipio: '',
-        detalleDireccion: ''
-      },
+      sections: [
+        {
+          id: 'empresa',
+          title: 'Información de la Empresa',
+          icon: 'fas fa-building',
+          color: 'primary',
+          editMode: false,
+          loading: false,
+          data: {
+            idEmpresa: null,
+            idUsuario: null,
+            nombreEmpresa: '',
+            nombreRepresentante: '',
+            descripcionEmpresa: ''
+          },
+          backup: {},
+          fields: [
+            { 
+              key: 'nombreEmpresa', 
+              label: 'Nombre de la Empresa', 
+              icon: 'fas fa-building', 
+              placeholder: 'Nombre oficial de la empresa',
+              required: true, 
+              col: 6,
+              helpText: 'Máximo 50 caracteres'
+            },
+            { 
+              key: 'nombreRepresentante', 
+              label: 'Nombre del Representante', 
+              icon: 'fas fa-user-tie', 
+              placeholder: 'Nombre del representante legal',
+              required: true, 
+              col: 6,
+              helpText: 'Máximo 60 caracteres'
+            },
+            { 
+              key: 'descripcionEmpresa', 
+              label: 'Descripción de la Empresa', 
+              icon: 'fas fa-info-circle', 
+              type: 'textarea',
+              placeholder: 'Describe tu empresa, sector, servicios, valores...',
+              col: 12,
+              rows: 4,
+              helpText: 'Opcional - Ayuda a los candidatos a conocer mejor tu empresa'
+            }
+          ]
+        },
+        {
+          id: 'contacto',
+          title: 'Información de Contacto',
+          icon: 'fas fa-phone',
+          color: 'success',
+          editMode: false,
+          loading: false,
+          data: {
+            idUsuario: null,
+            telefonoPersonal: '',
+            telefonoFijo: ''
+          },
+          backup: {},
+          fields: [
+            { 
+              key: 'telefonoPersonal', 
+              label: 'Teléfono Principal', 
+              icon: 'fas fa-mobile-alt', 
+              type: 'tel', 
+              placeholder: '0000-0000',
+              required: true, 
+              col: 6,
+              helpText: 'Teléfono principal de la empresa'
+            },
+            { 
+              key: 'telefonoFijo', 
+              label: 'Teléfono Secundario', 
+              icon: 'fas fa-phone', 
+              type: 'tel', 
+              placeholder: '0000-0000',
+              col: 6,
+              helpText: 'Teléfono alternativo (opcional)'
+            }
+          ]
+        },
+        {
+          id: 'direccion',
+          title: 'Ubicación de la Empresa',
+          icon: 'fas fa-map-marker-alt',
+          color: 'warning',
+          editMode: false,
+          loading: false,
+          data: {
+            idUsuario: null,
+            departamento: '',
+            municipio: '',
+            detalleDireccion: ''
+          },
+          backup: {},
+          fields: [
+            { 
+              key: 'departamento', 
+              label: 'Departamento', 
+              icon: 'fas fa-map', 
+              type: 'select',
+              placeholder: 'Selecciona departamento',
+              options: DEPARTAMENTOS_EL_SALVADOR.map(dep => ({ value: dep, label: dep })),
+              required: true,
+              col: 4 
+            },
+            { 
+              key: 'municipio', 
+              label: 'Municipio', 
+              icon: 'fas fa-city', 
+              placeholder: 'Municipio de la empresa',
+              required: true, 
+              col: 4 
+            },
+            { 
+              key: 'detalleDireccion', 
+              label: 'Dirección Detallada', 
+              icon: 'fas fa-building', 
+              type: 'textarea',
+              placeholder: 'Colonia, avenida, edificio, local...',
+              required: true,
+              col: 4,
+              rows: 2,
+              helpText: 'Dirección completa de las oficinas'
+            }
+          ]
+        }
+      ],
       
       estadisticas: {
         totalOfertas: 0,
@@ -327,22 +270,22 @@ export default {
         fechaRegistro: null
       },
       
-      formBackup: {},
-      contactoBackup: {},
-      direccionBackup: {},
-      errors: {},
-      
-      departamentosOptions: DEPARTAMENTOS_EL_SALVADOR.map(dep => ({
-        value: dep,
-        label: dep
-      }))
+      estadisticasConfig: [
+        { key: 'totalOfertas', label: 'Ofertas Publicadas', icon: 'fas fa-briefcase', color: 'primary' },
+        { key: 'ofertasActivas', label: 'Ofertas Activas', icon: 'fas fa-eye', color: 'success' },
+        { key: 'totalAplicaciones', label: 'Aplicaciones Recibidas', icon: 'fas fa-users', color: 'warning' },
+        { key: 'tiempoPlataforma', label: 'Tiempo en Plataforma', icon: 'fas fa-calendar', color: 'info' }
+      ]
     }
   },
+  
   computed: {
     ...mapGetters(['user']),
+    
     messageClass() {
       return `alert-${this.messageType}`
     },
+    
     messageIcon() {
       const icons = {
         success: 'fas fa-check-circle',
@@ -352,84 +295,85 @@ export default {
       return icons[this.messageType] || 'fas fa-info-circle'
     }
   },
+  
   async mounted() {
-    await this.cargarDatos()
+    await this.loadAllData()
   },
+  
   methods: {
-    async cargarDatos() {
-      try {
-        this.loading = true
-        await this.cargarPerfilEmpresa()
-        await this.cargarContacto()
-        await this.cargarDireccion()
-        await this.cargarEstadisticas()
-      } catch (error) {
-        console.error('Error cargando datos:', error)
-        this.showMessage('Error al cargar los datos', 'error')
-      } finally {
-        this.loading = false
-      }
+    // Cargar todos los datos
+    async loadAllData() {
+      const loadPromises = this.sections.map(async (section) => {
+        try {
+          section.loading = true
+          await this.loadSectionData(section.id)
+        } catch (error) {
+          console.error(`Error loading ${section.id}:`, error)
+          this.showMessage(`Error al cargar ${section.title}`, 'error')
+        } finally {
+          section.loading = false
+        }
+      })
+      
+      await Promise.all([...loadPromises, this.loadEstadisticas()])
     },
     
-    async cargarPerfilEmpresa() {
-      try {
-        const response = await api.get('/Empresa/todas')
-        const empresas = response.data
-        const empresaActual = empresas.find(emp => emp.idUsuario === this.user.idUsuario)
+    // Cargar datos por sección
+    async loadSectionData(sectionId) {
+      const loaders = {
+        empresa: async () => {
+          const response = await api.get('/Empresa/todas')
+          const empresa = response.data.find(emp => emp.idUsuario === this.user.idUsuario)
+          
+          if (empresa) {
+            this.getSection('empresa').data = {
+              idEmpresa: empresa.idEmpresa,
+              idUsuario: empresa.idUsuario,
+              nombreEmpresa: empresa.nombreEmpresa || '',
+              nombreRepresentante: empresa.nombreRepresentante || '',
+              descripcionEmpresa: empresa.descripcionEmpresa || ''
+            }
+          }
+        },
         
-        if (empresaActual) {
-          this.form = {
-            idEmpresa: empresaActual.idEmpresa,
-            idUsuario: empresaActual.idUsuario,
-            nombreEmpresa: empresaActual.nombreEmpresa || '',
-            nombreRepresentante: empresaActual.nombreRepresentante || '',
-            descripcionEmpresa: empresaActual.descripcionEmpresa || ''
+        contacto: async () => {
+          try {
+            const response = await api.get(`/Contacto/${this.user.idUsuario}`)
+            if (response.data) {
+              this.getSection('contacto').data = {
+                idUsuario: response.data.idUsuario,
+                telefonoPersonal: response.data.telefonoPersonal || '',
+                telefonoFijo: response.data.telefonoFijo || ''
+              }
+            }
+          } catch (error) {
+            if (error.response?.status !== 404) throw error
+          }
+        },
+        
+        direccion: async () => {
+          try {
+            const response = await api.get(`/Direccion/${this.user.idUsuario}`)
+            if (response.data) {
+              this.getSection('direccion').data = {
+                idUsuario: response.data.idUsuario,
+                departamento: response.data.departamento || '',
+                municipio: response.data.municipio || '',
+                detalleDireccion: response.data.detalleDireccion || ''
+              }
+            }
+          } catch (error) {
+            if (error.response?.status !== 404) throw error
           }
         }
-      } catch (error) {
-        console.error('Error cargando perfil de empresa:', error)
       }
+      
+      await loaders[sectionId]?.()
     },
     
-    async cargarContacto() {
-      try {
-        const response = await api.get(`/Contacto/${this.user.idUsuario}`)
-        if (response.data) {
-          this.contacto = {
-            idUsuario: response.data.idUsuario,
-            telefonoPersonal: response.data.telefonoPersonal || '',
-            telefonoFijo: response.data.telefonoFijo || ''
-          }
-        }
-      } catch (error) {
-        if (error.response?.status !== 404) {
-          console.error('Error cargando contacto:', error)
-        }
-      }
-    },
-    
-    async cargarDireccion() {
-      try {
-        const response = await api.get(`/Direccion/${this.user.idUsuario}`)
-        if (response.data) {
-          this.direccion = {
-            idUsuario: response.data.idUsuario,
-            departamento: response.data.departamento || '',
-            municipio: response.data.municipio || '',
-            detalleDireccion: response.data.detalleDireccion || ''
-          }
-        }
-      } catch (error) {
-        if (error.response?.status !== 404) {
-          console.error('Error cargando dirección:', error)
-        }
-      }
-    },
-    
-    async cargarEstadisticas() {
+    async loadEstadisticas() {
       try {
         // TODO: Implementar cuando tengamos endpoints de estadísticas
-        // Por ahora valores por defecto
         this.estadisticas = {
           totalOfertas: 0,
           ofertasActivas: 0,
@@ -441,163 +385,142 @@ export default {
       }
     },
     
-    enableEdit() {
-      this.editMode = true
-      this.formBackup = { ...this.form }
+    // Obtener sección por ID
+    getSection(id) {
+      return this.sections.find(s => s.id === id)
     },
     
-    cancelarEdicion() {
-      this.form = { ...this.formBackup }
-      this.editMode = false
+    // Obtener valor de estadística
+    getStatValue(key) {
+      if (key === 'tiempoPlataforma') {
+        return this.calcularTiempoEnPlataforma()
+      }
+      return this.estadisticas[key] || 0
+    },
+    
+    // Manejo de edición
+    toggleEdit(sectionId) {
+      const section = this.getSection(sectionId)
+      section.editMode = !section.editMode
+      
+      if (section.editMode) {
+        section.backup = { ...section.data }
+      }
       this.errors = {}
     },
     
-    cancelarEdicionContacto() {
-      this.contacto = { ...this.contactoBackup }
-      this.editContacto = false
+    cancelEdit(sectionId) {
+      const section = this.getSection(sectionId)
+      section.data = { ...section.backup }
+      section.editMode = false
       this.errors = {}
     },
     
-    cancelarEdicionDireccion() {
-      this.direccion = { ...this.direccionBackup }
-      this.editDireccion = false
+    // Validaciones unificadas
+    validateSection(sectionId) {
       this.errors = {}
-    },
-    
-    validateForm() {
-      this.errors = {}
+      const section = this.getSection(sectionId)
       
-      if (!validators.required(this.form.nombreEmpresa) || !validators.maxLength(this.form.nombreEmpresa, 50)) {
-        this.errors.nombreEmpresa = 'El nombre de la empresa es requerido (máximo 50 caracteres)'
-      }
-      
-      if (!validators.required(this.form.nombreRepresentante) || !validators.maxLength(this.form.nombreRepresentante, 60)) {
-        this.errors.nombreRepresentante = 'El nombre del representante es requerido (máximo 60 caracteres)'
-      }
-      
-      return Object.keys(this.errors).length === 0
-    },
-    
-    validateContacto() {
-      this.errors = {}
-      
-      if (!validators.required(this.contacto.telefonoPersonal) || !validators.telefono(this.contacto.telefonoPersonal)) {
-        this.errors.telefonoPersonal = 'El teléfono principal es requerido y debe tener formato válido'
-      }
-      
-      return Object.keys(this.errors).length === 0
-    },
-    
-    validateDireccion() {
-      this.errors = {}
-      
-      if (!validators.required(this.direccion.departamento)) {
-        this.errors.departamento = 'Selecciona el departamento'
-      }
-      
-      if (!validators.required(this.direccion.municipio)) {
-        this.errors.municipio = 'El municipio es requerido'
-      }
-      
-      if (!validators.required(this.direccion.detalleDireccion)) {
-        this.errors.detalleDireccion = 'La dirección detallada es requerida'
-      }
-      
-      return Object.keys(this.errors).length === 0
-    },
-    
-    async guardarPerfil() {
-      if (!this.validateForm()) return
-      
-      try {
-        this.loading = true
-        
-        const empresaData = {
-          idEmpresa: this.form.idEmpresa,
-          idUsuario: this.user.idUsuario,
-          nombreEmpresa: this.form.nombreEmpresa,
-          nombreRepresentante: this.form.nombreRepresentante,
-          descripcionEmpresa: this.form.descripcionEmpresa || null
-        }
-        
-        await api.put('/Empresa/editar', empresaData)
-        this.editMode = false
-        this.showMessage('Perfil de empresa actualizado exitosamente', 'success')
-        
-      } catch (error) {
-        console.error('Error guardando perfil:', error)
-        this.showMessage('Error al guardar el perfil de la empresa', 'error')
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async guardarContacto() {
-      if (!this.validateContacto()) return
-      
-      try {
-        this.loadingContacto = true
-        this.contactoBackup = { ...this.contacto }
-        
-        const contactoData = {
-          idUsuario: this.user.idUsuario,
-          telefonoPersonal: this.contacto.telefonoPersonal,
-          telefonoFijo: this.contacto.telefonoFijo || ''
-        }
-        
-        try {
-          await api.put('/Contacto/editar', contactoData)
-        } catch (error) {
-          if (error.response?.status === 404) {
-            await api.post('/Contacto/crear', contactoData)
-          } else {
-            throw error
+      const validationRules = {
+        empresa: () => {
+          if (!validators.required(section.data.nombreEmpresa) || !validators.maxLength(section.data.nombreEmpresa, 50)) {
+            this.errors.nombreEmpresa = 'El nombre de la empresa es requerido (máximo 50 caracteres)'
           }
-        }
+          if (!validators.required(section.data.nombreRepresentante) || !validators.maxLength(section.data.nombreRepresentante, 60)) {
+            this.errors.nombreRepresentante = 'El nombre del representante es requerido (máximo 60 caracteres)'
+          }
+        },
         
-        this.editContacto = false
-        this.showMessage('Información de contacto guardada', 'success')
+        contacto: () => {
+          if (!validators.required(section.data.telefonoPersonal) || !validators.telefono(section.data.telefonoPersonal)) {
+            this.errors.telefonoPersonal = 'El teléfono principal es requerido y debe tener formato válido'
+          }
+        },
+        
+        direccion: () => {
+          const requiredFields = [
+            { field: 'departamento', message: 'Selecciona el departamento' },
+            { field: 'municipio', message: 'El municipio es requerido' },
+            { field: 'detalleDireccion', message: 'La dirección detallada es requerida' }
+          ]
+          
+          requiredFields.forEach(({ field, message }) => {
+            if (!validators.required(section.data[field])) {
+              this.errors[field] = message
+            }
+          })
+        }
+      }
+      
+      validationRules[sectionId]?.()
+      return Object.keys(this.errors).length === 0
+    },
+    
+    // Guardar datos unificado
+    async saveSection(sectionId) {
+      if (!this.validateSection(sectionId)) return
+      
+      const section = this.getSection(sectionId)
+      section.loading = true
+      
+      try {
+        await this.saveSectionData(sectionId, section)
+        section.editMode = false
+        this.showMessage(`${section.title} actualizada exitosamente`, 'success')
         
       } catch (error) {
-        console.error('Error guardando contacto:', error)
-        this.showMessage('Error al guardar contacto', 'error')
+        console.error(`Error saving ${sectionId}:`, error)
+        this.showMessage(`Error al guardar ${section.title}`, 'error')
       } finally {
-        this.loadingContacto = false
+        section.loading = false
       }
     },
     
-    async guardarDireccion() {
-      if (!this.validateDireccion()) return
-      
-      try {
-        this.loadingDireccion = true
-        this.direccionBackup = { ...this.direccion }
-        
-        const direccionData = {
-          idUsuario: this.user.idUsuario,
-          departamento: this.direccion.departamento,
-          municipio: this.direccion.municipio,
-          detalleDireccion: this.direccion.detalleDireccion
-        }
-        
-        try {
-          await api.put('/Direccion/editar', direccionData)
-        } catch (error) {
-          if (error.response?.status === 404) {
-            await api.post('/Direccion/crear', direccionData)
-          } else {
-            throw error
+    // Guardar datos por sección
+    async saveSectionData(sectionId, section) {
+      const savers = {
+        empresa: async () => {
+          const data = {
+            ...section.data,
+            idUsuario: this.user.idUsuario,
+            descripcionEmpresa: section.data.descripcionEmpresa || null
           }
+          await api.put('/Empresa/editar', data)
+        },
+        
+        contacto: async () => {
+          const data = {
+            idUsuario: this.user.idUsuario,
+            telefonoPersonal: section.data.telefonoPersonal,
+            telefonoFijo: section.data.telefonoFijo || ''
+          }
+          await this.saveOrCreate('/Contacto', data)
+        },
+        
+        direccion: async () => {
+          const data = {
+            idUsuario: this.user.idUsuario,
+            departamento: section.data.departamento,
+            municipio: section.data.municipio,
+            detalleDireccion: section.data.detalleDireccion
+          }
+          await this.saveOrCreate('/Direccion', data)
         }
-        
-        this.editDireccion = false
-        this.showMessage('Dirección guardada exitosamente', 'success')
-        
+      }
+      
+      await savers[sectionId]?.()
+    },
+    
+    // Método auxiliar para crear o actualizar
+    async saveOrCreate(endpoint, data) {
+      try {
+        await api.put(`${endpoint}/editar`, data)
       } catch (error) {
-        console.error('Error guardando dirección:', error)
-        this.showMessage('Error al guardar dirección', 'error')
-      } finally {
-        this.loadingDireccion = false
+        if (error.response?.status === 404) {
+          await api.post(`${endpoint}/crear`, data)
+        } else {
+          throw error
+        }
       }
     },
     

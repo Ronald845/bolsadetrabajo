@@ -7,84 +7,61 @@
           <div class="d-flex justify-content-between align-items-center">
             <div>
               <h2 class="h4 mb-1">
-                <i class="fas fa-tools me-2 text-warning"></i>
-                Habilidades y Competencias
+                <i class="fas fa-tools me-2 text-warning"></i>Habilidades y Competencias
               </h2>
               <p class="text-muted mb-0">Gestiona tus habilidades técnicas y profesionales</p>
             </div>
-            <button 
-              @click="mostrarModal = true" 
-              class="btn btn-warning"
-              :disabled="!aspiranteId"
-            >
-              <i class="fas fa-plus me-2"></i>
-              Agregar Habilidad
+            <button @click="mostrarModal = true" class="btn btn-warning" :disabled="!aspiranteId">
+              <i class="fas fa-plus me-2"></i>Agregar Habilidad
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Debug info (temporal) -->
-      <div v-if="debugMode" class="alert alert-info mb-4">
-        <strong>🔍 Debug Info:</strong><br>
-        Usuario ID: {{ user?.idUsuario }}<br>
-        Aspirante ID: {{ aspiranteId || 'No encontrado' }}<br>
-        Habilidades cargadas: {{ habilidades.length }}
-      </div>
-
-      <!-- Filtros y búsqueda -->
+      <!-- Filtros -->
       <div class="row mb-4">
-        <div class="col-md-6">
-          <div class="input-group">
-            <span class="input-group-text">
-              <i class="fas fa-search"></i>
-            </span>
-            <input 
-              type="text" 
-              class="form-control" 
-              placeholder="Buscar habilidades..."
-              v-model="filtroTexto"
-            >
+        <div v-for="filtro in filtrosConfig" :key="filtro.key" :class="filtro.colClass">
+          <div v-if="filtro.type === 'search'" class="input-group">
+            <span class="input-group-text"><i :class="filtro.icon"></i></span>
+            <input type="text" class="form-control" :placeholder="filtro.placeholder" v-model="filtros[filtro.key]">
           </div>
-        </div>
-        <div class="col-md-6">
-          <select class="form-select" v-model="filtroNivel">
-            <option value="">Todos los niveles</option>
-            <option v-for="nivel in nivelesOptions" :key="nivel.value" :value="nivel.value">
-              {{ nivel.label }}
-            </option>
+          <select v-else class="form-select" v-model="filtros[filtro.key]">
+            <option value="">{{ filtro.placeholder }}</option>
+            <option v-for="opcion in filtro.options" :key="opcion.value" :value="opcion.value">{{ opcion.label }}</option>
           </select>
         </div>
       </div>
 
-      <!-- Lista de habilidades -->
+      <!-- Contenido Principal -->
       <div class="row">
         <div class="col-12">
+          <!-- Loading -->
           <div v-if="loading" class="text-center py-5">
-            <div class="spinner-border text-warning" role="status"></div>
+            <div class="spinner-border text-warning"></div>
             <p class="mt-2">Cargando habilidades...</p>
           </div>
-          
+
+          <!-- Error de perfil -->
           <div v-else-if="!aspiranteId" class="text-center py-5">
             <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
             <h5>Error al cargar perfil</h5>
             <p class="text-muted">No se pudo obtener tu información de aspirante</p>
             <button @click="cargarAspiranteId" class="btn btn-warning">
-              <i class="fas fa-refresh me-2"></i>
-              Reintentar
+              <i class="fas fa-refresh me-2"></i>Reintentar
             </button>
           </div>
-          
+
+          <!-- Sin habilidades -->
           <div v-else-if="habilidades.length === 0" class="text-center py-5">
             <i class="fas fa-tools fa-3x text-muted mb-3"></i>
             <h5>No hay habilidades registradas</h5>
             <p class="text-muted">Agrega tus habilidades técnicas y profesionales para destacar tu perfil</p>
             <button @click="mostrarModal = true" class="btn btn-warning">
-              <i class="fas fa-plus me-2"></i>
-              Agregar Primera Habilidad
+              <i class="fas fa-plus me-2"></i>Agregar Primera Habilidad
             </button>
           </div>
-          
+
+          <!-- Lista de habilidades -->
           <div v-else>
             <!-- Habilidades agrupadas por nivel -->
             <div v-for="nivel in nivelesConHabilidades" :key="nivel.nombre" class="nivel-grupo mb-4">
@@ -95,56 +72,38 @@
                   </span>
                 </h5>
               </div>
-              
+
               <div class="habilidades-grid mt-3">
-                <div 
-                  v-for="habilidad in nivel.habilidades" 
-                  :key="habilidad.idHabilidad"
-                  class="habilidad-card"
-                >
+                <div v-for="habilidad in nivel.habilidades" :key="habilidad.idHabilidad" class="habilidad-card">
                   <div class="card h-100">
                     <div class="card-body p-3">
                       <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title mb-1">{{ habilidad.nombreHabilidad }}</h6>
                         <div class="dropdown">
-                          <button 
-                            class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                            type="button" 
-                            :id="`dropdown${habilidad.idHabilidad}`"
-                            data-bs-toggle="dropdown"
-                          >
+                          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                             <i class="fas fa-ellipsis-v"></i>
                           </button>
                           <ul class="dropdown-menu">
-                            <li>
-                              <a class="dropdown-item" href="#" @click.prevent="editarHabilidad(habilidad)">
-                                <i class="fas fa-edit me-2"></i>Editar
-                              </a>
-                            </li>
-                            <li>
-                              <a class="dropdown-item text-danger" href="#" @click.prevent="confirmarEliminar(habilidad)">
-                                <i class="fas fa-trash me-2"></i>Eliminar
+                            <li v-for="accion in accionesHabilidad" :key="accion.key">
+                              <a class="dropdown-item" href="#" @click.prevent="accion.metodo(habilidad)" :class="accion.class">
+                                <i :class="accion.icon" class="me-2"></i>{{ accion.label }}
                               </a>
                             </li>
                           </ul>
                         </div>
                       </div>
-                      
+
                       <div class="nivel-indicator mb-2">
                         <div class="progress" style="height: 8px;">
-                          <div 
-                            class="progress-bar" 
-                            :class="`bg-${getNivelColor(habilidad.nivelDominio)}`"
-                            :style="{ width: getNivelPorcentaje(habilidad.nivelDominio) + '%' }"
-                          ></div>
+                          <div class="progress-bar" :class="`bg-${getNivelColor(habilidad.nivelDominio)}`"
+                            :style="{ width: getNivelPorcentaje(habilidad.nivelDominio) + '%' }"></div>
                         </div>
                         <small class="text-muted">{{ habilidad.nivelDominio }}</small>
                       </div>
-                      
+
                       <div v-if="habilidad.comentario" class="comentario">
                         <small class="text-muted">
-                          <i class="fas fa-comment me-1"></i>
-                          {{ habilidad.comentario }}
+                          <i class="fas fa-comment me-1"></i>{{ habilidad.comentario }}
                         </small>
                       </div>
                     </div>
@@ -152,18 +111,17 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Resumen de habilidades -->
             <div class="row mt-4">
               <div class="col-12">
                 <div class="card bg-light">
                   <div class="card-body">
                     <h6 class="card-title mb-3">
-                      <i class="fas fa-chart-pie me-2"></i>
-                      Resumen de Habilidades
+                      <i class="fas fa-chart-pie me-2"></i>Resumen de Habilidades
                     </h6>
                     <div class="row text-center">
-                      <div class="col-6 col-md-3" v-for="nivel in nivelesOptions" :key="nivel.value">
+                      <div v-for="nivel in nivelesOptions" :key="nivel.value" class="col-6 col-md-3">
                         <div class="resumen-item">
                           <div class="resumen-numero" :class="`text-${getNivelColor(nivel.value)}`">
                             {{ contarHabilidadesPorNivel(nivel.value) }}
@@ -180,75 +138,37 @@
         </div>
       </div>
 
-      <!-- Modal para agregar/editar habilidad -->
+      <!-- Modal Principal -->
       <div class="modal fade" :class="{ show: mostrarModal }" :style="{ display: mostrarModal ? 'block' : 'none' }" tabindex="-1">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title">
-                <i class="fas fa-tools me-2"></i>
-                {{ editando ? 'Editar' : 'Agregar' }} Habilidad
+                <i class="fas fa-tools me-2"></i>{{ editando ? 'Editar' : 'Agregar' }} Habilidad
               </h5>
               <button type="button" class="btn-close" @click="cerrarModal"></button>
             </div>
             <div class="modal-body">
               <form @submit.prevent="guardarHabilidad">
-                <!-- Nombre de la Habilidad -->
-                <FormField
-                  v-model="form.nombreHabilidad"
-                  label="Nombre de la Habilidad"
-                  icon="fas fa-cog"
-                  placeholder="JavaScript, Excel, Liderazgo, Photoshop..."
-                  :required="true"
-                  :error="errors.nombreHabilidad"
-                  help-text="Máximo 20 caracteres"
-                />
-                
-                <!-- Nivel de Dominio -->
-                <FormField
-                  v-model="form.nivelDominio"
-                  type="select"
-                  label="Nivel de Dominio"
-                  icon="fas fa-signal"
-                  placeholder="Selecciona tu nivel"
-                  :options="nivelesOptions"
-                  :required="true"
-                  :error="errors.nivelDominio"
-                />
-                
+                <div v-for="campo in camposForm" :key="campo.key">
+                  <FormField v-model="form[campo.key]" v-bind="campo" :error="errors[campo.key]" />
+                </div>
+
                 <!-- Preview del nivel -->
                 <div v-if="form.nivelDominio" class="mb-3">
                   <label class="form-label">Vista Previa del Nivel</label>
                   <div class="nivel-preview">
                     <div class="progress mb-2" style="height: 12px;">
-                      <div 
-                        class="progress-bar" 
-                        :class="`bg-${getNivelColor(form.nivelDominio)}`"
-                        :style="{ width: getNivelPorcentaje(form.nivelDominio) + '%' }"
-                      ></div>
+                      <div class="progress-bar" :class="`bg-${getNivelColor(form.nivelDominio)}`"
+                        :style="{ width: getNivelPorcentaje(form.nivelDominio) + '%' }"></div>
                     </div>
-                    <small class="text-muted">
-                      {{ getNivelDescripcion(form.nivelDominio) }}
-                    </small>
+                    <small class="text-muted">{{ getNivelDescripcion(form.nivelDominio) }}</small>
                   </div>
                 </div>
-                
-                <!-- Comentario -->
-                <FormField
-                  v-model="form.comentario"
-                  type="textarea"
-                  label="Comentario (Opcional)"
-                  icon="fas fa-comment"
-                  placeholder="Descripción adicional, años de experiencia, proyectos relevantes..."
-                  :rows="3"
-                  help-text="Proporciona contexto adicional sobre tu experiencia con esta habilidad"
-                />
               </form>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="cerrarModal" :disabled="guardando">
-                Cancelar
-              </button>
+              <button type="button" class="btn btn-secondary" @click="cerrarModal" :disabled="guardando">Cancelar</button>
               <button type="button" @click="guardarHabilidad" class="btn btn-warning" :disabled="guardando || !isFormValid">
                 <span v-if="guardando" class="spinner-border spinner-border-sm me-2"></span>
                 <i v-else class="fas fa-save me-2"></i>
@@ -258,18 +178,14 @@
           </div>
         </div>
       </div>
-      
-      <!-- Backdrop del modal -->
-      <div v-if="mostrarModal" class="modal-backdrop fade show" @click="cerrarModal"></div>
 
-      <!-- Modal de confirmación de eliminación -->
+      <!-- Modal Confirmación -->
       <div class="modal fade" :class="{ show: mostrarConfirmacion }" :style="{ display: mostrarConfirmacion ? 'block' : 'none' }" tabindex="-1">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title text-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                Confirmar Eliminación
+                <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
               </h5>
               <button type="button" class="btn-close" @click="mostrarConfirmacion = false"></button>
             </div>
@@ -282,9 +198,7 @@
               <p class="text-muted small">Esta acción no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="mostrarConfirmacion = false" :disabled="eliminando">
-                Cancelar
-              </button>
+              <button type="button" class="btn btn-secondary" @click="mostrarConfirmacion = false" :disabled="eliminando">Cancelar</button>
               <button type="button" @click="eliminarHabilidad" class="btn btn-danger" :disabled="eliminando">
                 <span v-if="eliminando" class="spinner-border spinner-border-sm me-2"></span>
                 <i v-else class="fas fa-trash me-2"></i>
@@ -294,14 +208,14 @@
           </div>
         </div>
       </div>
-      
-      <!-- Backdrop del modal de confirmación -->
-      <div v-if="mostrarConfirmacion" class="modal-backdrop fade show" @click="mostrarConfirmacion = false"></div>
 
-      <!-- Mensaje de éxito/error -->
-      <div v-if="message" class="alert mt-4" :class="messageClass">
-        <i :class="messageIcon" class="me-2"></i>
-        {{ message }}
+      <!-- Backdrops -->
+      <div v-if="mostrarModal || mostrarConfirmacion" class="modal-backdrop fade show" 
+        @click="mostrarModal ? cerrarModal() : (mostrarConfirmacion = false)"></div>
+
+      <!-- Mensaje -->
+      <div v-if="message" class="alert mt-4" :class="`alert-${messageType}`">
+        <i :class="messageIcon" class="me-2"></i>{{ message }}
       </div>
     </div>
   </div>
@@ -318,55 +232,50 @@ import api from '../services/api'
 export default {
   name: 'Habilidades',
   components: { FormField },
+  
   data() {
     return {
-      loading: false,
-      guardando: false,
-      eliminando: false,
-      mostrarModal: false,
-      mostrarConfirmacion: false,
-      editando: false,
-      message: '',
-      messageType: 'success',
-      debugMode: true, // Cambiar a false en producción
+      loading: false, guardando: false, eliminando: false, mostrarModal: false, mostrarConfirmacion: false,
+      editando: false, message: '', messageType: 'success', debugMode: true,
       
-      // Filtros
-      filtroTexto: '',
-      filtroNivel: '',
+      habilidades: [], habilidadAEliminar: null, aspiranteId: null,
       
-      habilidades: [],
-      habilidadAEliminar: null,
-      aspiranteId: null,
+      filtros: { texto: '', nivel: '' },
       
       form: {
-        idHabilidad: null,
-        idAspirante: null,
-        nombreHabilidad: '',
-        nivelDominio: '',
-        comentario: ''
+        idHabilidad: null, idAspirante: null, nombreHabilidad: '', nivelDominio: '', comentario: ''
       },
       
-      errors: {},
-      nivelesOptions: NIVELES_DOMINIO
+      errors: {}, nivelesOptions: NIVELES_DOMINIO,
+      
+      // Configuraciones
+      filtrosConfig: [
+        { key: 'texto', type: 'search', icon: 'fas fa-search', placeholder: 'Buscar habilidades...', colClass: 'col-md-6' },
+        { key: 'nivel', placeholder: 'Todos los niveles', options: NIVELES_DOMINIO, colClass: 'col-md-6' }
+      ],
+      
+      accionesHabilidad: [
+        { key: 'editar', label: 'Editar', icon: 'fas fa-edit', metodo: this.editarHabilidad },
+        { key: 'eliminar', label: 'Eliminar', icon: 'fas fa-trash', class: 'text-danger', metodo: this.confirmarEliminar }
+      ]
     }
   },
+  
   computed: {
     ...mapGetters(['user']),
     
     habilidadesFiltradas() {
       let resultado = [...this.habilidades]
       
-      // Filtro por texto
-      if (this.filtroTexto) {
+      if (this.filtros.texto) {
         resultado = resultado.filter(h => 
-          h.nombreHabilidad.toLowerCase().includes(this.filtroTexto.toLowerCase()) ||
-          (h.comentario && h.comentario.toLowerCase().includes(this.filtroTexto.toLowerCase()))
+          h.nombreHabilidad.toLowerCase().includes(this.filtros.texto.toLowerCase()) ||
+          (h.comentario && h.comentario.toLowerCase().includes(this.filtros.texto.toLowerCase()))
         )
       }
       
-      // Filtro por nivel
-      if (this.filtroNivel) {
-        resultado = resultado.filter(h => h.nivelDominio === this.filtroNivel)
+      if (this.filtros.nivel) {
+        resultado = resultado.filter(h => h.nivelDominio === this.filtros.nivel)
       }
       
       return resultado
@@ -383,78 +292,52 @@ export default {
     },
     
     isFormValid() {
-      return !this.errors.nombreHabilidad && 
-             !this.errors.nivelDominio && 
-             this.form.nombreHabilidad && 
-             this.form.nivelDominio
-    },
-    
-    messageClass() {
-      return `alert-${this.messageType}`
+      return !Object.keys(this.errors).length && this.form.nombreHabilidad && this.form.nivelDominio
     },
     
     messageIcon() {
-      const icons = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle'
-      }
+      const icons = { success: 'fas fa-check-circle', error: 'fas fa-exclamation-circle', warning: 'fas fa-exclamation-triangle' }
       return icons[this.messageType] || 'fas fa-info-circle'
+    },
+    
+    camposForm() {
+      return [
+        { key: 'nombreHabilidad', label: 'Nombre de la Habilidad', icon: 'fas fa-cog', placeholder: 'JavaScript, Excel, Liderazgo, Photoshop...', required: true, 'help-text': 'Máximo 20 caracteres' },
+        { key: 'nivelDominio', type: 'select', label: 'Nivel de Dominio', icon: 'fas fa-signal', placeholder: 'Selecciona tu nivel', options: NIVELES_DOMINIO, required: true },
+        { key: 'comentario', type: 'textarea', label: 'Comentario (Opcional)', icon: 'fas fa-comment', placeholder: 'Descripción adicional, años de experiencia, proyectos relevantes...', rows: 3, 'help-text': 'Proporciona contexto adicional sobre tu experiencia con esta habilidad' }
+      ]
     }
   },
   
   async mounted() {
-    console.log('🔄 Habilidades mounted, cargando datos...')
     await this.cargarAspiranteId()
-    if (this.aspiranteId) {
-      await this.cargarHabilidades()
-    }
+    if (this.aspiranteId) await this.cargarHabilidades()
   },
   
   methods: {
     async cargarAspiranteId() {
       try {
-        console.log('🔍 Buscando aspirante para usuario:', this.user?.idUsuario)
-        
-        // ✅ CORREGIDO: Buscar directamente en la tabla Aspirante
         const response = await api.get('/Aspirante/todos')
-        console.log('📋 Aspirantes encontrados:', response.data)
+        const aspirante = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
         
-        const aspiranteActual = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
-        
-        if (aspiranteActual) {
-          this.aspiranteId = aspiranteActual.idAspirante
-          console.log('✅ Aspirante ID encontrado:', this.aspiranteId)
+        if (aspirante) {
+          this.aspiranteId = aspirante.idAspirante
         } else {
-          console.log('❌ No se encontró aspirante para el usuario:', this.user?.idUsuario)
           this.showMessage('No se encontró tu perfil de aspirante. Contacta al administrador.', 'error')
         }
-        
       } catch (error) {
-        console.error('❌ Error obteniendo ID de aspirante:', error)
         this.showMessage('Error al cargar tu perfil de aspirante', 'error')
       }
     },
     
     async cargarHabilidades() {
-      if (!this.aspiranteId) {
-        console.log('⚠️ No hay aspiranteId, no se pueden cargar habilidades')
-        return
-      }
+      if (!this.aspiranteId) return
       
       try {
         this.loading = true
-        console.log('🛠️ Cargando habilidades para aspirante:', this.aspiranteId)
-        
         const response = await aspiranteService.obtenerHabilidades()
-        console.log('📋 Todas las habilidades:', response)
-        
-        // Filtrar solo las habilidades del aspirante actual
         this.habilidades = response.filter(h => h.idAspirante === this.aspiranteId)
-        console.log('✅ Habilidades del aspirante:', this.habilidades)
-        
       } catch (error) {
-        console.error('❌ Error cargando habilidades:', error)
         this.showMessage('Error al cargar las habilidades', 'error')
       } finally {
         this.loading = false
@@ -482,17 +365,12 @@ export default {
     async eliminarHabilidad() {
       try {
         this.eliminando = true
-        console.log('🗑️ Eliminando habilidad:', this.habilidadAEliminar.idHabilidad)
-        
         await aspiranteService.eliminarHabilidad(this.habilidadAEliminar.idHabilidad)
-        
         await this.cargarHabilidades()
         this.mostrarConfirmacion = false
         this.habilidadAEliminar = null
         this.showMessage('Habilidad eliminada exitosamente', 'success')
-        
       } catch (error) {
-        console.error('❌ Error eliminando habilidad:', error)
         this.showMessage('Error al eliminar la habilidad', 'error')
       } finally {
         this.eliminando = false
@@ -503,11 +381,7 @@ export default {
       this.mostrarModal = false
       this.editando = false
       this.form = {
-        idHabilidad: null,
-        idAspirante: null,
-        nombreHabilidad: '',
-        nivelDominio: '',
-        comentario: ''
+        idHabilidad: null, idAspirante: null, nombreHabilidad: '', nivelDominio: '', comentario: ''
       }
       this.errors = {}
     },
@@ -527,13 +401,8 @@ export default {
     },
     
     async guardarHabilidad() {
-      if (!this.validateForm()) {
-        console.log('❌ Validación fallida, errores:', this.errors)
-        return
-      }
-      
-      if (!this.aspiranteId) {
-        this.showMessage('Error: No se pudo identificar tu perfil de aspirante', 'error')
+      if (!this.validateForm() || !this.aspiranteId) {
+        if (!this.aspiranteId) this.showMessage('Error: No se pudo identificar tu perfil de aspirante', 'error')
         return
       }
       
@@ -547,47 +416,22 @@ export default {
           comentario: this.form.comentario || null
         }
         
-        console.log('💾 Guardando habilidad:', habilidadData)
-        console.log('🔄 Editando:', this.editando)
-        
         if (this.editando) {
           habilidadData.idHabilidad = this.form.idHabilidad
-          console.log('📝 Actualizando habilidad existente con ID:', this.form.idHabilidad)
-          const response = await aspiranteService.actualizarHabilidad(habilidadData)
-          console.log('✅ Respuesta actualización:', response)
+          await aspiranteService.actualizarHabilidad(habilidadData)
           this.showMessage('Habilidad actualizada exitosamente', 'success')
         } else {
-          console.log('🆕 Creando nueva habilidad')
-          const response = await aspiranteService.crearHabilidad(habilidadData)
-          console.log('✅ Respuesta creación:', response)
+          await aspiranteService.crearHabilidad(habilidadData)
           this.showMessage('Habilidad agregada exitosamente', 'success')
         }
         
         await this.cargarHabilidades()
         this.cerrarModal()
-        
       } catch (error) {
-        console.error('❌ Error completo guardando habilidad:', error)
-        console.error('❌ Error response:', error.response)
-        console.error('❌ Error data:', error.response?.data)
-        console.error('❌ Error status:', error.response?.status)
-        console.error('❌ Error message:', error.message)
-        
-        // Mensaje de error más específico
         let errorMessage = 'Error al guardar la habilidad'
-        if (error.response?.status === 400) {
-          errorMessage = `Error de datos: ${error.response.data || 'Datos inválidos'}`
-        } else if (error.response?.status === 401) {
-          errorMessage = 'Error de autenticación. Inicia sesión nuevamente.'
-        } else if (error.response?.status === 403) {
-          errorMessage = 'No tienes permisos para realizar esta acción'
-        } else if (error.response?.status === 404) {
-          errorMessage = 'Endpoint no encontrado. Verifica la configuración de la API.'
-        } else if (error.response?.status === 500) {
-          errorMessage = 'Error del servidor. Contacta al administrador.'
-        } else if (error.message.includes('Network Error')) {
-          errorMessage = 'Error de conexión. Verifica tu internet.'
-        }
+        if (error.response?.status === 400) errorMessage = `Error de datos: ${error.response.data || 'Datos inválidos'}`
+        else if (error.response?.status === 401) errorMessage = 'Error de autenticación. Inicia sesión nuevamente.'
+        else if (error.response?.status === 500) errorMessage = 'Error del servidor. Contacta al administrador.'
         
         this.showMessage(errorMessage, 'error')
       } finally {
@@ -596,22 +440,12 @@ export default {
     },
     
     getNivelColor(nivel) {
-      const colores = {
-        'Básico': 'secondary',
-        'Intermedio': 'info',
-        'Avanzado': 'warning',
-        'Experto': 'success'
-      }
+      const colores = { 'Básico': 'secondary', 'Intermedio': 'info', 'Avanzado': 'warning', 'Experto': 'success' }
       return colores[nivel] || 'secondary'
     },
     
     getNivelPorcentaje(nivel) {
-      const porcentajes = {
-        'Básico': 25,
-        'Intermedio': 50,
-        'Avanzado': 75,
-        'Experto': 100
-      }
+      const porcentajes = { 'Básico': 25, 'Intermedio': 50, 'Avanzado': 75, 'Experto': 100 }
       return porcentajes[nivel] || 0
     },
     
@@ -639,183 +473,51 @@ export default {
 </script>
 
 <style scoped>
-.habilidades {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  min-height: 100vh;
-}
+.habilidades { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); min-height: 100vh; }
 
-/* Nivel Groups */
-.nivel-grupo {
-  margin-bottom: 2rem;
-}
+.nivel-grupo { margin-bottom: 2rem; }
+.nivel-header { border-bottom: 2px solid #f59e0b; padding-bottom: 0.5rem; margin-bottom: 1rem; }
 
-.nivel-header {
-  border-bottom: 2px solid #f59e0b;
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
-}
+.habilidades-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.habilidad-card .card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.habilidad-card .card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); }
 
-/* Habilidades Grid */
-.habilidades-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-}
+.nivel-indicator .progress { border-radius: 10px; background-color: #f3f4f6; }
+.nivel-indicator .progress-bar { border-radius: 10px; transition: width 0.3s ease; }
+.nivel-preview { background: #f8fafc; padding: 1rem; border-radius: 10px; border-left: 4px solid #f59e0b; }
 
-.habilidad-card .card {
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+.comentario { background: #f8fafc; padding: 0.5rem; border-radius: 6px; border-left: 3px solid #f59e0b; }
 
-.habilidad-card .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
+.resumen-item { padding: 1rem 0; }
+.resumen-numero { font-size: 2rem; font-weight: bold; line-height: 1; }
+.resumen-label { font-size: 0.875rem; color: #6b7280; font-weight: 500; }
 
-/* Progress Bars */
-.nivel-indicator .progress {
-  border-radius: 10px;
-  background-color: #f3f4f6;
-}
+.modal.show { background: rgba(0, 0, 0, 0.5); }
+.modal-content { border-radius: 15px; border: none; }
+.modal-header { border-bottom: 1px solid #e5e7eb; border-radius: 15px 15px 0 0; }
+.modal-footer { border-top: 1px solid #e5e7eb; border-radius: 0 0 15px 15px; }
 
-.nivel-indicator .progress-bar {
-  border-radius: 10px;
-  transition: width 0.3s ease;
-}
+.btn { border-radius: 8px; font-weight: 500; transition: all 0.2s ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; }
+.btn-warning:hover { background: linear-gradient(135deg, #d97706, #b45309); color: white; }
 
-.nivel-preview {
-  background: #f8fafc;
-  padding: 1rem;
-  border-radius: 10px;
-  border-left: 4px solid #f59e0b;
-}
+.badge { font-size: 0.75rem; padding: 0.35em 0.65em; }
+.input-group-text { background: white; border-color: #d1d5db; }
 
-/* Comentario */
-.comentario {
-  background: #f8fafc;
-  padding: 0.5rem;
-  border-radius: 6px;
-  border-left: 3px solid #f59e0b;
-}
+.dropdown-toggle::after { display: none; }
+.dropdown-menu { border-radius: 10px; border: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.dropdown-item { border-radius: 5px; margin: 0.125rem; transition: all 0.2s ease; }
+.dropdown-item:hover { background-color: #f3f4f6; transform: translateX(2px); }
 
-/* Resumen */
-.resumen-item {
-  padding: 1rem 0;
-}
-
-.resumen-numero {
-  font-size: 2rem;
-  font-weight: bold;
-  line-height: 1;
-}
-
-.resumen-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-/* Modal Styles */
-.modal.show {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  border-radius: 15px;
-  border: none;
-}
-
-.modal-header {
-  border-bottom: 1px solid #e5e7eb;
-  border-radius: 15px 15px 0 0;
-}
-
-.modal-footer {
-  border-top: 1px solid #e5e7eb;
-  border-radius: 0 0 15px 15px;
-}
-
-/* Buttons */
-.btn {
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
-.btn-warning {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  border: none;
-  color: white;
-}
-
-.btn-warning:hover {
-  background: linear-gradient(135deg, #d97706, #b45309);
-  color: white;
-}
-
-/* Badges */
-.badge {
-  font-size: 0.75rem;
-  padding: 0.35em 0.65em;
-}
-
-/* Input Group */
-.input-group-text {
-  background: white;
-  border-color: #d1d5db;
-}
-
-/* Dropdown */
-.dropdown-toggle::after {
-  display: none;
-}
-
-.dropdown-menu {
-  border-radius: 10px;
-  border: none;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.dropdown-item {
-  border-radius: 5px;
-  margin: 0.125rem;
-  transition: all 0.2s ease;
-}
-
-.dropdown-item:hover {
-  background-color: #f3f4f6;
-  transform: translateX(2px);
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-  .habilidades-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .resumen-numero {
-    font-size: 1.5rem;
-  }
-  
-  .nivel-header h5 {
-    font-size: 1rem;
-  }
+  .habilidades-grid { grid-template-columns: 1fr; }
+  .resumen-numero { font-size: 1.5rem; }
+  .nivel-header h5 { font-size: 1rem; }
 }
 
 @media (max-width: 576px) {
-  .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  
-  .habilidad-card .card-body {
-    padding: 1rem;
-  }
+  .container { padding-left: 1rem; padding-right: 1rem; }
+  .habilidad-card .card-body { padding: 1rem; }
 }
 </style>

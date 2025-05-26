@@ -12,219 +12,75 @@
         </div>
       </div>
 
-      <!-- Información Personal -->
-      <div class="card shadow-sm mb-4">
+      <!-- Secciones dinámicas -->
+      <div v-for="section in sections" :key="section.id" class="card shadow-sm mb-4">
         <div class="card-header bg-white">
           <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
-              <i class="fas fa-id-card me-2 text-primary"></i>
-              Información Personal
+              <i :class="`${section.icon} me-2 text-${section.color}`"></i>
+              {{ section.title }}
             </h5>
             <button 
-              v-if="!editMode" 
-              @click="enableEdit" 
-              class="btn btn-primary btn-sm"
+              v-if="!section.editMode" 
+              @click="toggleEdit(section.id)"
+              :class="`btn btn-${section.color} btn-sm`"
             >
               <i class="fas fa-edit me-2"></i>
               Editar
             </button>
           </div>
         </div>
+
         <div class="card-body">
-          <form @submit.prevent="guardarPerfil">
+          <form @submit.prevent="saveSection(section.id)">
             <div class="row">
-              <div class="col-md-6">
+              <div 
+                v-for="field in section.fields" 
+                :key="field.key"
+                :class="`col-md-${field.col || 12}`"
+              >
                 <FormField
-                  v-model="form.primerNombre"
-                  label="Primer Nombre"
-                  icon="fas fa-user"
-                  placeholder="Tu primer nombre"
-                  :required="true"
-                  :readonly="!editMode"
-                  :error="errors.primerNombre"
-                />
-              </div>
-              <div class="col-md-6">
-                <FormField
-                  v-model="form.segundoNombre"
-                  label="Segundo Nombre"
-                  icon="fas fa-user"
-                  placeholder="Tu segundo nombre (opcional)"
-                  :readonly="!editMode"
-                />
-              </div>
-              <div class="col-md-6">
-                <FormField
-                  v-model="form.primerApellido"
-                  label="Primer Apellido"
-                  icon="fas fa-user"
-                  placeholder="Tu primer apellido"
-                  :required="true"
-                  :readonly="!editMode"
-                  :error="errors.primerApellido"
-                />
-              </div>
-              <div class="col-md-6">
-                <FormField
-                  v-model="form.segundoApellido"
-                  label="Segundo Apellido"
-                  icon="fas fa-user"
-                  placeholder="Tu segundo apellido (opcional)"
-                  :readonly="!editMode"
-                />
-              </div>
-              <div class="col-12">
-                <FormField
-                  v-model="form.puestoBusca"
-                  label="Puesto que Busca"
-                  icon="fas fa-briefcase"
-                  placeholder="Ej: Desarrollador, Contador, Diseñador..."
-                  :readonly="!editMode"
+                  v-model="section.data[field.key]"
+                  :type="field.type || 'text'"
+                  :label="field.label"
+                  :icon="field.icon"
+                  :placeholder="field.placeholder || `Tu ${field.label.toLowerCase()}`"
+                  :required="field.required"
+                  :readonly="!section.editMode"
+                  :disabled="field.disabled && !section.editMode"
+                  :options="field.options"
+                  :rows="field.rows"
+                  :error="errors[field.key]"
                 />
               </div>
             </div>
             
-            <div v-if="editMode" class="d-flex justify-content-end gap-2 mt-3">
-              <button type="button" @click="cancelarEdicion" class="btn btn-secondary">
+            <div v-if="section.editMode" class="d-flex justify-content-end gap-2 mt-3">
+              <button 
+                type="button" 
+                @click="cancelEdit(section.id)" 
+                class="btn btn-secondary btn-sm"
+              >
                 Cancelar
               </button>
-              <button type="submit" class="btn btn-primary" :disabled="loading">
-                <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                {{ loading ? 'Guardando...' : 'Guardar' }}
+              <button 
+                type="submit" 
+                :class="`btn btn-${section.color} btn-sm`"
+                :disabled="section.loading"
+              >
+                <span v-if="section.loading" class="spinner-border spinner-border-sm me-2"></span>
+                {{ section.loading ? 'Guardando...' : 'Guardar' }}
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- Información de Contacto -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fas fa-phone me-2 text-success"></i>
-              Contacto
-            </h5>
-            <button 
-              v-if="!editContacto" 
-              @click="editContacto = true" 
-              class="btn btn-success btn-sm"
-            >
-              <i class="fas fa-edit me-2"></i>
-              Editar
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <FormField
-                v-model="contacto.telefonoPersonal"
-                type="tel"
-                label="Teléfono Personal"
-                icon="fas fa-mobile-alt"
-                placeholder="0000-0000"
-                :required="true"
-                :readonly="!editContacto"
-                :error="errors.telefonoPersonal"
-              />
-            </div>
-            <div class="col-md-6">
-              <FormField
-                v-model="contacto.telefonoFijo"
-                type="tel"
-                label="Teléfono Fijo"
-                icon="fas fa-phone"
-                placeholder="0000-0000"
-                :readonly="!editContacto"
-              />
-            </div>
-          </div>
-          
-          <div v-if="editContacto" class="d-flex justify-content-end gap-2">
-            <button @click="cancelarEdicionContacto" class="btn btn-secondary btn-sm">
-              Cancelar
-            </button>
-            <button @click="guardarContacto" class="btn btn-success btn-sm" :disabled="loadingContacto">
-              <span v-if="loadingContacto" class="spinner-border spinner-border-sm me-2"></span>
-              {{ loadingContacto ? 'Guardando...' : 'Guardar' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Dirección -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fas fa-map-marker-alt me-2 text-warning"></i>
-              Dirección
-            </h5>
-            <button 
-              v-if="!editDireccion" 
-              @click="editDireccion = true" 
-              class="btn btn-warning btn-sm"
-            >
-              <i class="fas fa-edit me-2"></i>
-              Editar
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-4">
-              <FormField
-                v-model="direccion.departamento"
-                type="select"
-                label="Departamento"
-                icon="fas fa-map"
-                placeholder="Selecciona departamento"
-                :options="departamentosOptions"
-                :disabled="!editDireccion"
-                :error="errors.departamento"
-              />
-            </div>
-            <div class="col-md-4">
-              <FormField
-                v-model="direccion.municipio"
-                label="Municipio"
-                icon="fas fa-city"
-                placeholder="Tu municipio"
-                :readonly="!editDireccion"
-                :error="errors.municipio"
-              />
-            </div>
-            <div class="col-md-4">
-              <FormField
-                v-model="direccion.detalleDireccion"
-                type="textarea"
-                label="Dirección Detallada"
-                icon="fas fa-home"
-                placeholder="Colonia, avenida, casa..."
-                :readonly="!editDireccion"
-                :rows="2"
-                :error="errors.detalleDireccion"
-              />
-            </div>
-          </div>
-          
-          <div v-if="editDireccion" class="d-flex justify-content-end gap-2 mt-3">
-            <button @click="cancelarEdicionDireccion" class="btn btn-secondary btn-sm">
-              Cancelar
-            </button>
-            <button @click="guardarDireccion" class="btn btn-warning btn-sm" :disabled="loadingDireccion">
-              <span v-if="loadingDireccion" class="spinner-border spinner-border-sm me-2"></span>
-              {{ loadingDireccion ? 'Guardando...' : 'Guardar' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mensaje -->
-      <div v-if="message" class="alert" :class="messageClass">
+      <!-- Mensaje global -->
+      <div v-if="message" :class="messageClass" class="alert alert-dismissible fade show">
         <i :class="messageIcon" class="me-2"></i>
         {{ message }}
+        <button type="button" class="btn-close" @click="message = ''"></button>
       </div>
     </div>
   </div>
@@ -240,56 +96,96 @@ import api from '../services/api'
 export default {
   name: 'PerfilAspirante',
   components: { FormField },
+  
   data() {
     return {
-      editMode: false,
-      editContacto: false,
-      editDireccion: false,
-      loading: false,
-      loadingContacto: false,
-      loadingDireccion: false,
       message: '',
       messageType: 'success',
-      
-      form: {
-        idAspirante: null,
-        idUsuario: null,
-        primerNombre: '',
-        segundoNombre: '',
-        primerApellido: '',
-        segundoApellido: '',
-        puestoBusca: ''
-      },
-      
-      contacto: {
-        idUsuario: null,
-        telefonoPersonal: '',
-        telefonoFijo: ''
-      },
-      
-      direccion: {
-        idUsuario: null,
-        departamento: '',
-        municipio: '',
-        detalleDireccion: ''
-      },
-      
-      formBackup: {},
-      contactoBackup: {},
-      direccionBackup: {},
       errors: {},
       
-      departamentosOptions: DEPARTAMENTOS_EL_SALVADOR.map(dep => ({
-        value: dep,
-        label: dep
-      }))
+      sections: [
+        {
+          id: 'personal',
+          title: 'Información Personal',
+          icon: 'fas fa-id-card',
+          color: 'primary',
+          editMode: false,
+          loading: false,
+          data: {
+            idAspirante: null,
+            idUsuario: null,
+            primerNombre: '',
+            segundoNombre: '',
+            primerApellido: '',
+            segundoApellido: '',
+            puestoBusca: ''
+          },
+          backup: {},
+          fields: [
+            { key: 'primerNombre', label: 'Primer Nombre', icon: 'fas fa-user', required: true, col: 6 },
+            { key: 'segundoNombre', label: 'Segundo Nombre', icon: 'fas fa-user', col: 6 },
+            { key: 'primerApellido', label: 'Primer Apellido', icon: 'fas fa-user', required: true, col: 6 },
+            { key: 'segundoApellido', label: 'Segundo Apellido', icon: 'fas fa-user', col: 6 },
+            { key: 'puestoBusca', label: 'Puesto que Busca', icon: 'fas fa-briefcase', col: 12 }
+          ]
+        },
+        {
+          id: 'contacto',
+          title: 'Contacto',
+          icon: 'fas fa-phone',
+          color: 'success',
+          editMode: false,
+          loading: false,
+          data: {
+            idUsuario: null,
+            telefonoPersonal: '',
+            telefonoFijo: ''
+          },
+          backup: {},
+          fields: [
+            { key: 'telefonoPersonal', label: 'Teléfono Personal', icon: 'fas fa-mobile-alt', type: 'tel', required: true, col: 6 },
+            { key: 'telefonoFijo', label: 'Teléfono Fijo', icon: 'fas fa-phone', type: 'tel', col: 6 }
+          ]
+        },
+        {
+          id: 'direccion',
+          title: 'Dirección',
+          icon: 'fas fa-map-marker-alt',
+          color: 'warning',
+          editMode: false,
+          loading: false,
+          data: {
+            idUsuario: null,
+            departamento: '',
+            municipio: '',
+            detalleDireccion: ''
+          },
+          backup: {},
+          fields: [
+            { 
+              key: 'departamento', 
+              label: 'Departamento', 
+              icon: 'fas fa-map', 
+              type: 'select',
+              options: DEPARTAMENTOS_EL_SALVADOR.map(dep => ({ value: dep, label: dep })),
+              required: true,
+              col: 4 
+            },
+            { key: 'municipio', label: 'Municipio', icon: 'fas fa-city', required: true, col: 4 },
+            { key: 'detalleDireccion', label: 'Dirección Detallada', icon: 'fas fa-home', type: 'textarea', required: true, col: 4 }
+          ]
+        }
+      ]
     }
   },
+  
   computed: {
     ...mapGetters(['user']),
+    
     messageClass() {
       return `alert-${this.messageType}`
     },
+    
     messageIcon() {
       const icons = {
         success: 'fas fa-check-circle',
@@ -299,240 +195,218 @@ export default {
       return icons[this.messageType] || 'fas fa-info-circle'
     }
   },
+  
   async mounted() {
-    await this.cargarDatos()
+    await this.loadAllData()
   },
+  
   methods: {
-    async cargarDatos() {
-      try {
-        this.loading = true
-        await this.cargarPerfilAspirante()
-        await this.cargarContacto()
-        await this.cargarDireccion()
-      } catch (error) {
-        console.error('Error cargando datos:', error)
-        this.showMessage('Error al cargar los datos', 'error')
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async cargarPerfilAspirante() {
-      try {
-        const response = await api.get('/Aspirante/todos')
-        const aspirantes = response.data
-        const aspiranteActual = aspirantes.find(asp => asp.idUsuario === this.user.idUsuario)
-        
-        if (aspiranteActual) {
-          this.form = {
-            idAspirante: aspiranteActual.idAspirante,
-            idUsuario: aspiranteActual.idUsuario,
-            primerNombre: aspiranteActual.primerNombre || '',
-            segundoNombre: aspiranteActual.segundoNombre || '',
-            primerApellido: aspiranteActual.primerApellido || '',
-            segundoApellido: aspiranteActual.segundoApellido || '',
-            puestoBusca: aspiranteActual.puestoBusca || ''
-          }
-        }
-      } catch (error) {
-        console.error('Error cargando perfil:', error)
-      }
-    },
-    
-    async cargarContacto() {
-      try {
-        const response = await api.get(`/Contacto/${this.user.idUsuario}`)
-        if (response.data) {
-          this.contacto = {
-            idUsuario: response.data.idUsuario,
-            telefonoPersonal: response.data.telefonoPersonal || '',
-            telefonoFijo: response.data.telefonoFijo || ''
-          }
-        }
-      } catch (error) {
-        if (error.response?.status !== 404) {
-          console.error('Error cargando contacto:', error)
-        }
-      }
-    },
-    
-    async cargarDireccion() {
-      try {
-        const response = await api.get(`/Direccion/${this.user.idUsuario}`)
-        if (response.data) {
-          this.direccion = {
-            idUsuario: response.data.idUsuario,
-            departamento: response.data.departamento || '',
-            municipio: response.data.municipio || '',
-            detalleDireccion: response.data.detalleDireccion || ''
-          }
-        }
-      } catch (error) {
-        if (error.response?.status !== 404) {
-          console.error('Error cargando dirección:', error)
-        }
-      }
-    },
-    
-    enableEdit() {
-      this.editMode = true
-      this.formBackup = { ...this.form }
-    },
-    
-    cancelarEdicion() {
-      this.form = { ...this.formBackup }
-      this.editMode = false
-      this.errors = {}
-    },
-    
-    cancelarEdicionContacto() {
-      this.contacto = { ...this.contactoBackup }
-      this.editContacto = false
-      this.errors = {}
-    },
-    
-    cancelarEdicionDireccion() {
-      this.direccion = { ...this.direccionBackup }
-      this.editDireccion = false
-      this.errors = {}
-    },
-    
-    validateForm() {
-      this.errors = {}
-      
-      if (!validators.required(this.form.primerNombre) || !validators.minLength(this.form.primerNombre, 2)) {
-        this.errors.primerNombre = 'El primer nombre es requerido (mínimo 2 caracteres)'
-      }
-      
-      if (!validators.required(this.form.primerApellido) || !validators.minLength(this.form.primerApellido, 2)) {
-        this.errors.primerApellido = 'El primer apellido es requerido (mínimo 2 caracteres)'
-      }
-      
-      return Object.keys(this.errors).length === 0
-    },
-    
-    validateContacto() {
-      this.errors = {}
-      
-      if (!validators.required(this.contacto.telefonoPersonal) || !validators.telefono(this.contacto.telefonoPersonal)) {
-        this.errors.telefonoPersonal = 'El teléfono personal es requerido y debe tener formato válido'
-      }
-      
-      return Object.keys(this.errors).length === 0
-    },
-    
-    validateDireccion() {
-      this.errors = {}
-      
-      if (!validators.required(this.direccion.departamento)) {
-        this.errors.departamento = 'Selecciona tu departamento'
-      }
-      
-      if (!validators.required(this.direccion.municipio)) {
-        this.errors.municipio = 'El municipio es requerido'
-      }
-      
-      if (!validators.required(this.direccion.detalleDireccion)) {
-        this.errors.detalleDireccion = 'La dirección detallada es requerida'
-      }
-      
-      return Object.keys(this.errors).length === 0
-    },
-    
-    async guardarPerfil() {
-      if (!this.validateForm()) return
-      
-      try {
-        this.loading = true
-        
-        const aspiranteData = {
-          idAspirante: this.form.idAspirante,
-          idUsuario: this.user.idUsuario,
-          primerNombre: this.form.primerNombre,
-          segundoNombre: this.form.segundoNombre || null,
-          primerApellido: this.form.primerApellido,
-          segundoApellido: this.form.segundoApellido || null,
-          puestoBusca: this.form.puestoBusca || null
-        }
-        
-        await api.put('/Aspirante/editar', aspiranteData)
-        this.editMode = false
-        this.showMessage('Perfil actualizado exitosamente', 'success')
-        
-      } catch (error) {
-        console.error('Error guardando perfil:', error)
-        this.showMessage('Error al guardar el perfil', 'error')
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async guardarContacto() {
-      if (!this.validateContacto()) return
-      
-      try {
-        this.loadingContacto = true
-        this.contactoBackup = { ...this.contacto }
-        
-        const contactoData = {
-          idUsuario: this.user.idUsuario,
-          telefonoPersonal: this.contacto.telefonoPersonal,
-          telefonoFijo: this.contacto.telefonoFijo || ''
-        }
-        
+    // Cargar todos los datos
+    async loadAllData() {
+      const loadPromises = this.sections.map(async (section) => {
         try {
-          await api.put('/Contacto/editar', contactoData)
+          section.loading = true
+          await this.loadSectionData(section.id)
         } catch (error) {
-          if (error.response?.status === 404) {
-            await api.post('/Contacto/crear', contactoData)
-          } else {
-            throw error
+          console.error(`Error loading ${section.id}:`, error)
+          this.showMessage(`Error al cargar ${section.title}`, 'error')
+        } finally {
+          section.loading = false
+        }
+      })
+      
+      await Promise.all(loadPromises)
+    },
+    
+    // Cargar datos por sección
+    async loadSectionData(sectionId) {
+      const loaders = {
+        personal: async () => {
+          const response = await api.get('/Aspirante/todos')
+          const aspirante = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
+          
+          if (aspirante) {
+            this.getSection('personal').data = {
+              idAspirante: aspirante.idAspirante,
+              idUsuario: aspirante.idUsuario,
+              primerNombre: aspirante.primerNombre || '',
+              segundoNombre: aspirante.segundoNombre || '',
+              primerApellido: aspirante.primerApellido || '',
+              segundoApellido: aspirante.segundoApellido || '',
+              puestoBusca: aspirante.puestoBusca || ''
+            }
+          }
+        },
+        
+        contacto: async () => {
+          try {
+            const response = await api.get(`/Contacto/${this.user.idUsuario}`)
+            if (response.data) {
+              this.getSection('contacto').data = {
+                idUsuario: response.data.idUsuario,
+                telefonoPersonal: response.data.telefonoPersonal || '',
+                telefonoFijo: response.data.telefonoFijo || ''
+              }
+            }
+          } catch (error) {
+            if (error.response?.status !== 404) throw error
+          }
+        },
+        
+        direccion: async () => {
+          try {
+            const response = await api.get(`/Direccion/${this.user.idUsuario}`)
+            if (response.data) {
+              this.getSection('direccion').data = {
+                idUsuario: response.data.idUsuario,
+                departamento: response.data.departamento || '',
+                municipio: response.data.municipio || '',
+                detalleDireccion: response.data.detalleDireccion || ''
+              }
+            }
+          } catch (error) {
+            if (error.response?.status !== 404) throw error
           }
         }
+      }
+      
+      await loaders[sectionId]?.()
+    },
+    
+    // Obtener sección por ID
+    getSection(id) {
+      return this.sections.find(s => s.id === id)
+    },
+    
+    // Manejo de edición
+    toggleEdit(sectionId) {
+      const section = this.getSection(sectionId)
+      section.editMode = !section.editMode
+      
+      if (section.editMode) {
+        section.backup = { ...section.data }
+      }
+      this.errors = {}
+    },
+    
+    cancelEdit(sectionId) {
+      const section = this.getSection(sectionId)
+      section.data = { ...section.backup }
+      section.editMode = false
+      this.errors = {}
+    },
+    
+    // Validaciones unificadas
+    validateSection(sectionId) {
+      this.errors = {}
+      const section = this.getSection(sectionId)
+      
+      const validationRules = {
+        personal: () => {
+          if (!this.validateRequired(section.data.primerNombre, 2)) {
+            this.errors.primerNombre = 'El primer nombre es requerido (mínimo 2 caracteres)'
+          }
+          if (!this.validateRequired(section.data.primerApellido, 2)) {
+            this.errors.primerApellido = 'El primer apellido es requerido (mínimo 2 caracteres)'
+          }
+        },
         
-        this.editContacto = false
-        this.showMessage('Información de contacto guardada', 'success')
+        contacto: () => {
+          if (!validators.required(section.data.telefonoPersonal) || !validators.telefono(section.data.telefonoPersonal)) {
+            this.errors.telefonoPersonal = 'El teléfono personal es requerido y debe tener formato válido'
+          }
+        },
+        
+        direccion: () => {
+          const requiredFields = [
+            { field: 'departamento', message: 'Selecciona tu departamento' },
+            { field: 'municipio', message: 'El municipio es requerido' },
+            { field: 'detalleDireccion', message: 'La dirección detallada es requerida' }
+          ]
+          
+          requiredFields.forEach(({ field, message }) => {
+            if (!validators.required(section.data[field])) {
+              this.errors[field] = message
+            }
+          })
+        }
+      }
+      
+      validationRules[sectionId]?.()
+      return Object.keys(this.errors).length === 0
+    },
+    
+    validateRequired(value, minLength = 1) {
+      return validators.required(value) && validators.minLength(value, minLength)
+    },
+    
+    // Guardar datos unificado
+    async saveSection(sectionId) {
+      if (!this.validateSection(sectionId)) return
+      
+      const section = this.getSection(sectionId)
+      section.loading = true
+      
+      try {
+        await this.saveSectionData(sectionId, section)
+        section.editMode = false
+        this.showMessage(`${section.title} actualizada exitosamente`, 'success')
         
       } catch (error) {
-        console.error('Error guardando contacto:', error)
-        this.showMessage('Error al guardar contacto', 'error')
+        console.error(`Error saving ${sectionId}:`, error)
+        this.showMessage(`Error al guardar ${section.title}`, 'error')
       } finally {
-        this.loadingContacto = false
+        section.loading = false
       }
     },
     
-    async guardarDireccion() {
-      if (!this.validateDireccion()) return
-      
-      try {
-        this.loadingDireccion = true
-        this.direccionBackup = { ...this.direccion }
-        
-        const direccionData = {
-          idUsuario: this.user.idUsuario,
-          departamento: this.direccion.departamento,
-          municipio: this.direccion.municipio,
-          detalleDireccion: this.direccion.detalleDireccion
-        }
-        
-        try {
-          await api.put('/Direccion/editar', direccionData)
-        } catch (error) {
-          if (error.response?.status === 404) {
-            await api.post('/Direccion/crear', direccionData)
-          } else {
-            throw error
+    // Guardar datos por sección
+    async saveSectionData(sectionId, section) {
+      const savers = {
+        personal: async () => {
+          const data = {
+            ...section.data,
+            idUsuario: this.user.idUsuario,
+            segundoNombre: section.data.segundoNombre || null,
+            segundoApellido: section.data.segundoApellido || null,
+            puestoBusca: section.data.puestoBusca || null
           }
+          await api.put('/Aspirante/editar', data)
+        },
+        
+        contacto: async () => {
+          const data = {
+            idUsuario: this.user.idUsuario,
+            telefonoPersonal: section.data.telefonoPersonal,
+            telefonoFijo: section.data.telefonoFijo || ''
+          }
+          await this.saveOrCreate('/Contacto', data)
+        },
+        
+        direccion: async () => {
+          const data = {
+            idUsuario: this.user.idUsuario,
+            departamento: section.data.departamento,
+            municipio: section.data.municipio,
+            detalleDireccion: section.data.detalleDireccion
+          }
+          await this.saveOrCreate('/Direccion', data)
         }
-        
-        this.editDireccion = false
-        this.showMessage('Dirección guardada exitosamente', 'success')
-        
+      }
+      
+      await savers[sectionId]?.()
+    },
+    
+    // Método auxiliar para crear o actualizar
+    async saveOrCreate(endpoint, data) {
+      try {
+        await api.put(`${endpoint}/editar`, data)
       } catch (error) {
-        console.error('Error guardando dirección:', error)
-        this.showMessage('Error al guardar dirección', 'error')
-      } finally {
-        this.loadingDireccion = false
+        if (error.response?.status === 404) {
+          await api.post(`${endpoint}/crear`, data)
+        } else {
+          throw error
+        }
       }
     },
     

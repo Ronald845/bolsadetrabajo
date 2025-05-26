@@ -37,14 +37,21 @@
             </label>
             <div class="input-wrapper">
               <input
-                type="password"
+                :type="showPassword ? 'text' : 'password'"
                 class="form-control modern-input"
                 id="clave"
                 v-model="form.clave"
                 :class="{ 'is-invalid': errors.clave }"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Contraseña segura"
                 required
               >
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+              >
+                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              </button>
             </div>
             <div v-if="errors.clave" class="error-message">
               <i class="fas fa-exclamation-circle"></i>
@@ -61,7 +68,7 @@
             </label>
             <div class="input-wrapper">
               <input
-                type="password"
+                :type="showConfirmPassword ? 'text' : 'password'"
                 class="form-control modern-input"
                 id="confirmarClave"
                 v-model="form.confirmarClave"
@@ -69,6 +76,13 @@
                 placeholder="Repetir contraseña"
                 required
               >
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showConfirmPassword = !showConfirmPassword"
+              >
+                <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              </button>
             </div>
             <div v-if="errors.confirmarClave" class="error-message">
               <i class="fas fa-exclamation-circle"></i>
@@ -77,6 +91,14 @@
           </div>
         </div>
       </div>
+
+      <!-- 🆕 MEDIDOR DE FUERZA DE CONTRASEÑA -->
+      <PasswordStrengthMeter 
+        v-if="form.clave"
+        :password="form.clave"
+        @validation-change="handlePasswordValidation"
+        @password-generated="handleGeneratedPassword"
+      />
       
       <div class="form-group">
         <label for="rol" class="form-label">
@@ -244,7 +266,7 @@
       <button
         type="submit"
         class="btn btn-success modern-btn w-100"
-        :disabled="loading"
+        :disabled="loading || !isFormValid"
       >
         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
         <i v-else class="fas fa-user-plus me-2"></i>
@@ -265,10 +287,15 @@
 
 <script>
 import { mapGetters } from 'vuex'
+import PasswordStrengthMeter from './PasswordStrengthMeter.vue'
+import { validators, errorMessages } from '../utils/validators'
 
 export default {
   name: 'RegisterForm',
   emits: ['register-success'],
+  components: {
+    PasswordStrengthMeter
+  },
   data() {
     return {
       form: {
@@ -290,34 +317,52 @@ export default {
         descripcionEmpresa: ''
       },
       errors: {},
-      successMessage: ''
+      successMessage: '',
+      passwordValid: false,
+      showPassword: false,
+      showConfirmPassword: false
     }
   },
+  
   computed: {
-    ...mapGetters(['loading', 'error'])
+    ...mapGetters(['loading', 'error']),
+    
+    isFormValid() {
+      return this.passwordValid && 
+             this.form.correo && 
+             this.form.clave && 
+             this.form.confirmarClave && 
+             this.form.rol &&
+             Object.keys(this.errors).length === 0
+    }
   },
+  
   methods: {
     validateForm() {
       this.errors = {}
       
+      // Validación de email
       if (!this.form.correo) {
         this.errors.correo = 'El correo es requerido'
-      } else if (!/\S+@\S+\.\S+/.test(this.form.correo)) {
+      } else if (!validators.email(this.form.correo)) {
         this.errors.correo = 'El correo no es válido'
       }
       
+      // 🆕 VALIDACIÓN ROBUSTA DE CONTRASEÑA (SOLO FRONTEND)
       if (!this.form.clave) {
         this.errors.clave = 'La contraseña es requerida'
-      } else if (this.form.clave.length < 6) {
-        this.errors.clave = 'La contraseña debe tener al menos 6 caracteres'
+      } else if (!validators.password.isValid(this.form.clave)) {
+        this.errors.clave = errorMessages.password.invalid
       }
       
+      // Validación de confirmación
       if (!this.form.confirmarClave) {
         this.errors.confirmarClave = 'Confirma tu contraseña'
-      } else if (this.form.clave !== this.form.confirmarClave) {
-        this.errors.confirmarClave = 'Las contraseñas no coinciden'
+      } else if (!validators.passwordConfirmation(this.form.clave, this.form.confirmarClave)) {
+        this.errors.confirmarClave = errorMessages.password.confirmation
       }
       
+      // Validación de rol
       if (!this.form.rol) {
         this.errors.rol = 'Selecciona el tipo de usuario'
       }
@@ -339,11 +384,32 @@ export default {
         }
       }
       
-      return Object.keys(this.errors).length === 0
+      return Object.keys(this.errors).length === 0 && this.passwordValid
+    },
+    
+    // 🆕 MANEJAR CAMBIOS EN VALIDACIÓN DE CONTRASEÑA
+    handlePasswordValidation(isValid) {
+      this.passwordValid = isValid
+      console.log('🔐 Validación de contraseña:', isValid)
+    },
+    
+    // 🆕 MANEJAR CONTRASEÑA GENERADA
+    handleGeneratedPassword(newPassword) {
+      console.log('🎲 Nueva contraseña generada')
+      this.form.clave = newPassword
+      this.form.confirmarClave = newPassword
+      
+      // Triggear validación
+      this.$nextTick(() => {
+        this.validateForm()
+      })
     },
     
     async handleSubmit() {
+      console.log('📝 Iniciando proceso de registro...')
+      
       if (!this.validateForm()) {
+        console.log('❌ Validación del formulario fallida')
         return
       }
       
@@ -377,7 +443,7 @@ export default {
             console.log('🛡️ Admin creado - No requiere perfil adicional')
           }
           
-          this.successMessage = 'Cuenta creada exitosamente. Puedes iniciar sesión ahora.'
+          this.successMessage = '🎉 ¡Cuenta creada exitosamente! Puedes iniciar sesión ahora.'
           this.$emit('register-success')
           
           // Redirigir al login después de 2 segundos
@@ -387,6 +453,19 @@ export default {
         }
       } catch (error) {
         console.error('❌ Error en registro:', error)
+      }
+    }
+  },
+  
+  // 🔍 Debug del estado del componente
+  watch: {
+    passwordValid(newVal) {
+      console.log('👀 Password valid changed:', newVal)
+    },
+    
+    'form.clave'(newVal) {
+      if (newVal) {
+        console.log('👀 Password changed, length:', newVal.length)
       }
     }
   }
@@ -466,6 +545,25 @@ export default {
   background: #fef2f2;
 }
 
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: color 0.3s ease;
+  z-index: 10;
+}
+
+.password-toggle:hover {
+  color: #22c55e;
+}
+
 .error-message {
   display: flex;
   align-items: center;
@@ -479,11 +577,23 @@ export default {
 }
 
 .profile-section {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #e7f3ff 100%);
+  border: 2px solid #e2e8f0;
   border-radius: 16px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #22c55e, #3b82f6);
 }
 
 .section-title {
@@ -492,6 +602,7 @@ export default {
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
+  font-size: 1.1rem;
 }
 
 .section-title::before {
@@ -512,6 +623,7 @@ export default {
   display: flex;
   align-items: center;
   margin-bottom: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
 }
 
 .modern-alert-success {
@@ -523,6 +635,14 @@ export default {
   display: flex;
   align-items: center;
   margin-bottom: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.3);
+  animation: successPulse 0.6s ease-out;
+}
+
+@keyframes successPulse {
+  0% { transform: scale(0.95); opacity: 0; }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .modern-alert i,
@@ -542,11 +662,12 @@ export default {
   position: relative;
   overflow: hidden;
   color: white;
+  box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.3);
 }
 
 .modern-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
   background: linear-gradient(135deg, #16a34a, #15803d);
 }
 
@@ -554,7 +675,22 @@ export default {
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
+  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
+}
+
+.modern-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.modern-btn:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .form-footer {
@@ -593,8 +729,8 @@ export default {
 .form-group:nth-child(5) { animation-delay: 0.5s; }
 
 .profile-section {
-  animation: slideInUp 0.5s ease-out;
-  animation-delay: 0.6s;
+  animation: slideInUp 0.6s ease-out;
+  animation-delay: 0.7s;
   animation-fill-mode: both;
 }
 
@@ -609,10 +745,28 @@ export default {
   }
 }
 
+/* Estados de carga mejorados */
+.modern-btn .spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.1em;
+}
+
+/* Efectos de enfoque mejorados */
+.modern-input:focus {
+  background: white;
+  border-color: #22c55e;
+  box-shadow: 
+    0 0 0 0.2rem rgba(34, 197, 94, 0.1),
+    0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .form-title {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
   }
   
   .modern-input {
@@ -626,6 +780,10 @@ export default {
   .profile-section {
     padding: 1rem;
   }
+  
+  .password-toggle {
+    right: 0.75rem;
+  }
 }
 
 @media (max-width: 576px) {
@@ -636,5 +794,49 @@ export default {
   .section-title {
     font-size: 1rem;
   }
+  
+  .register-form-wrapper {
+    padding: 0 0.5rem;
+  }
+}
+
+/* Estados de validación mejorados */
+.modern-input.is-invalid {
+  border-color: #ef4444;
+  background: #fef2f2;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Mejoras visuales adicionales */
+.form-group:hover .modern-input:not(:focus) {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.form-select.modern-input {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+  padding-right: 2.5rem;
+}
+
+/* Indicador de progreso del formulario */
+.register-form::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #22c55e, #3b82f6);
+  width: var(--form-progress, 0%);
+  transition: width 0.3s ease;
+  z-index: 1000;
 }
 </style>

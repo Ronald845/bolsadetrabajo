@@ -7,139 +7,89 @@
           <div class="d-flex justify-content-between align-items-center">
             <div>
               <h2 class="h4 mb-1">
-                <i class="fas fa-briefcase me-2 text-success"></i>
-                Experiencia Laboral
+                <i class="fas fa-briefcase me-2 text-success"></i>Experiencia Laboral
               </h2>
               <p class="text-muted mb-0">Gestiona tu historial profesional y experiencia de trabajo</p>
             </div>
-            <button 
-              @click="mostrarModal = true" 
-              class="btn btn-success"
-              :disabled="!aspiranteId"
-            >
-              <i class="fas fa-plus me-2"></i>
-              Agregar Experiencia
+            <button @click="mostrarModal = true" class="btn btn-success" :disabled="!aspiranteId">
+              <i class="fas fa-plus me-2"></i>Agregar Experiencia
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Debug info (temporal) -->
-      <div v-if="debugMode" class="alert alert-info mb-4">
-        <strong>🔍 Debug Info:</strong><br>
-        Usuario ID: {{ user?.idUsuario }}<br>
-        Aspirante ID: {{ aspiranteId || 'No encontrado' }}<br>
-        Experiencias cargadas: {{ experiencias.length }}
-      </div>
-
-      <!-- Lista de experiencias -->
+      <!-- Contenido Principal -->
       <div class="row">
         <div class="col-12">
+          <!-- Loading -->
           <div v-if="loading" class="text-center py-5">
-            <div class="spinner-border text-success" role="status"></div>
+            <div class="spinner-border text-success"></div>
             <p class="mt-2">Cargando experiencias laborales...</p>
           </div>
-          
+
+          <!-- Error de perfil -->
           <div v-else-if="!aspiranteId" class="text-center py-5">
             <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
             <h5>Error al cargar perfil</h5>
             <p class="text-muted">No se pudo obtener tu información de aspirante</p>
             <button @click="cargarAspiranteId" class="btn btn-success">
-              <i class="fas fa-refresh me-2"></i>
-              Reintentar
+              <i class="fas fa-refresh me-2"></i>Reintentar
             </button>
           </div>
-          
+
+          <!-- Sin experiencias -->
           <div v-else-if="experiencias.length === 0" class="text-center py-5">
             <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
             <h5>No hay experiencias laborales registradas</h5>
             <p class="text-muted">Agrega tu primera experiencia laboral para completar tu perfil profesional</p>
             <button @click="mostrarModal = true" class="btn btn-success">
-              <i class="fas fa-plus me-2"></i>
-              Agregar Experiencia
+              <i class="fas fa-plus me-2"></i>Agregar Experiencia
             </button>
           </div>
-          
-          <div v-else>
-            <!-- Timeline de experiencias -->
-            <div class="timeline">
-              <div 
-                v-for="(experiencia, index) in experienciasOrdenadas" 
-                :key="experiencia.idExperiencia"
-                class="timeline-item"
-                :class="{ 'timeline-item-current': !experiencia.fechaFin }"
-              >
-                <div class="timeline-marker">
-                  <i class="fas fa-briefcase"></i>
-                </div>
-                <div class="timeline-content">
-                  <div class="card experiencia-card">
-                    <div class="card-body">
-                      <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="flex-grow-1">
-                          <h5 class="card-title mb-1">{{ experiencia.puestoTrabajo }}</h5>
-                          <h6 class="card-subtitle text-success mb-2">{{ experiencia.nombreEmpresa }}</h6>
+
+          <!-- Timeline de experiencias -->
+          <div v-else class="timeline">
+            <div v-for="experiencia in experienciasOrdenadas" :key="experiencia.idExperiencia" 
+              class="timeline-item" :class="{ 'timeline-item-current': !experiencia.fechaFin }">
+              <div class="timeline-marker"><i class="fas fa-briefcase"></i></div>
+              <div class="timeline-content">
+                <div class="card experiencia-card">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                      <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">{{ experiencia.puestoTrabajo }}</h5>
+                        <h6 class="card-subtitle text-success mb-2">{{ experiencia.nombreEmpresa }}</h6>
+                      </div>
+                      <div class="d-flex gap-2">
+                        <span v-if="!experiencia.fechaFin" class="badge bg-success">Actual</span>
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                          </button>
+                          <ul class="dropdown-menu">
+                            <li v-for="accion in accionesExp" :key="accion.key">
+                              <a class="dropdown-item" href="#" @click.prevent="accion.metodo(experiencia)" :class="accion.class">
+                                <i :class="accion.icon" class="me-2"></i>{{ accion.label }}
+                              </a>
+                            </li>
+                          </ul>
                         </div>
-                        <div class="d-flex gap-2">
-                          <span v-if="!experiencia.fechaFin" class="badge bg-success">Actual</span>
-                          <div class="dropdown">
-                            <button 
-                              class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                              type="button" 
-                              :id="`dropdown${experiencia.idExperiencia}`"
-                              data-bs-toggle="dropdown"
-                            >
-                              <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                            <ul class="dropdown-menu">
-                              <li>
-                                <a class="dropdown-item" href="#" @click.prevent="editarExperiencia(experiencia)">
-                                  <i class="fas fa-edit me-2"></i>Editar
-                                </a>
-                              </li>
-                              <li>
-                                <a class="dropdown-item text-danger" href="#" @click.prevent="confirmarEliminar(experiencia)">
-                                  <i class="fas fa-trash me-2"></i>Eliminar
-                                </a>
-                              </li>
-                            </ul>
+                      </div>
+                    </div>
+
+                    <div class="experiencia-info">
+                      <div class="row mb-3">
+                        <div class="col-md-6" v-for="info in getInfoItems(experiencia)" :key="info.key">
+                          <div class="info-item">
+                            <i :class="info.icon" class="text-muted me-2"></i>
+                            <span v-html="info.text"></span>
                           </div>
                         </div>
                       </div>
-                      
-                      <div class="experiencia-info">
-                        <div class="row mb-3">
-                          <div class="col-md-6">
-                            <div class="info-item">
-                              <i class="fas fa-calendar-alt text-muted me-2"></i>
-                              <span>{{ formatFecha(experiencia.fechaInicio) }}</span>
-                              <span v-if="experiencia.fechaFin"> - {{ formatFecha(experiencia.fechaFin) }}</span>
-                              <span v-else class="text-success"> - Actualidad</span>
-                            </div>
-                          </div>
-                          <div class="col-md-6">
-                            <div class="info-item">
-                              <i class="fas fa-clock text-muted me-2"></i>
-                              <span>{{ calcularDuracion(experiencia.fechaInicio, experiencia.fechaFin) }}</span>
-                            </div>
-                          </div>
-                          <div v-if="experiencia.telefonoEmpresa" class="col-md-6">
-                            <div class="info-item">
-                              <i class="fas fa-phone text-muted me-2"></i>
-                              <span>{{ experiencia.telefonoEmpresa }}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div class="funciones-section">
-                          <h6 class="mb-2">
-                            <i class="fas fa-tasks me-2"></i>
-                            Funciones y Responsabilidades:
-                          </h6>
-                          <div class="funciones-content">
-                            {{ experiencia.funciones }}
-                          </div>
-                        </div>
+
+                      <div class="funciones-section">
+                        <h6 class="mb-2"><i class="fas fa-tasks me-2"></i>Funciones y Responsabilidades:</h6>
+                        <div class="funciones-content">{{ experiencia.funciones }}</div>
                       </div>
                     </div>
                   </div>
@@ -150,139 +100,55 @@
         </div>
       </div>
 
-      <!-- Modal para agregar/editar experiencia -->
+      <!-- Modal Principal -->
       <div class="modal fade" :class="{ show: mostrarModal }" :style="{ display: mostrarModal ? 'block' : 'none' }" tabindex="-1">
         <div class="modal-dialog modal-xl">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title">
-                <i class="fas fa-briefcase me-2"></i>
-                {{ editando ? 'Editar' : 'Agregar' }} Experiencia Laboral
+                <i class="fas fa-briefcase me-2"></i>{{ editando ? 'Editar' : 'Agregar' }} Experiencia Laboral
               </h5>
               <button type="button" class="btn-close" @click="cerrarModal"></button>
             </div>
             <div class="modal-body">
               <form @submit.prevent="guardarExperiencia">
                 <div class="row">
-                  <!-- Puesto de Trabajo -->
-                  <div class="col-md-6">
-                    <FormField
-                      v-model="form.puestoTrabajo"
-                      label="Puesto de Trabajo"
-                      icon="fas fa-user-tie"
-                      placeholder="Desarrollador, Contador, Gerente..."
-                      :required="true"
-                      :error="errors.puestoTrabajo"
-                      help-text="Máximo 20 caracteres"
-                    />
+                  <div v-for="campo in camposForm" :key="campo.key" :class="campo.colClass || 'col-md-6'">
+                    <FormField v-if="!campo.conditional || campo.conditional()" 
+                      v-model="form[campo.key]" v-bind="campo" :error="errors[campo.key]" />
                   </div>
-                  
-                  <!-- Nombre de la Empresa -->
-                  <div class="col-md-6">
-                    <FormField
-                      v-model="form.nombreEmpresa"
-                      label="Nombre de la Empresa"
-                      icon="fas fa-building"
-                      placeholder="Nombre de la empresa u organización"
-                      :required="true"
-                      :error="errors.nombreEmpresa"
-                      help-text="Máximo 50 caracteres"
-                    />
-                  </div>
-                  
-                  <!-- Fecha Inicio -->
-                  <div class="col-md-6">
-                    <FormField
-                      v-model="form.fechaInicio"
-                      type="date"
-                      label="Fecha de Inicio"
-                      icon="fas fa-calendar-start"
-                      :required="true"
-                      :error="errors.fechaInicio"
-                      :max="fechaHoy"
-                    />
-                  </div>
-                  
-                  <!-- Fecha Fin -->
+
+                  <!-- Checkbox trabajo actual -->
                   <div class="col-md-6">
                     <div class="mb-3">
                       <div class="form-check mb-2">
-                        <input 
-                          class="form-check-input" 
-                          type="checkbox" 
-                          id="trabajoActual"
-                          v-model="trabajoActual"
-                          @change="onTrabajoActualChange"
-                        >
+                        <input class="form-check-input" type="checkbox" id="trabajoActual" 
+                          v-model="trabajoActual" @change="onTrabajoActualChange">
                         <label class="form-check-label" for="trabajoActual">
-                          <i class="fas fa-clock me-2"></i>
-                          Trabajo actual
+                          <i class="fas fa-clock me-2"></i>Trabajo actual
                         </label>
                       </div>
-                      <FormField
-                        v-if="!trabajoActual"
-                        v-model="form.fechaFin"
-                        type="date"
-                        label="Fecha de Finalización"
-                        icon="fas fa-calendar-check"
-                        :min="form.fechaInicio"
-                        :max="fechaHoy"
-                        :error="errors.fechaFin"
-                      />
+                      <FormField v-if="!trabajoActual" v-model="form.fechaFin" type="date" 
+                        label="Fecha de Finalización" icon="fas fa-calendar-check" 
+                        :min="form.fechaInicio" :max="fechaHoy" :error="errors.fechaFin" />
                     </div>
                   </div>
-                  
-                  <!-- Teléfono de la Empresa -->
-                  <div class="col-md-6">
-                    <FormField
-                      v-model="form.telefonoEmpresa"
-                      type="tel"
-                      label="Teléfono de la Empresa"
-                      icon="fas fa-phone"
-                      placeholder="0000-0000 (opcional)"
-                      help-text="Para referencias laborales"
-                    />
-                  </div>
-                  
+
                   <!-- Estado del empleo -->
                   <div class="col-md-6">
                     <div class="mb-3">
-                      <label class="form-label">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Estado
-                      </label>
+                      <label class="form-label"><i class="fas fa-info-circle me-2"></i>Estado</label>
                       <div class="form-control-plaintext">
-                        <span class="badge" :class="`bg-${getEstadoColor()}`">
-                          {{ getEstadoExperiencia() }}
-                        </span>
-                        <small class="text-muted ms-2">
-                          {{ getDuracionTexto() }}
-                        </small>
+                        <span class="badge" :class="`bg-${getEstadoColor()}`">{{ getEstadoExperiencia() }}</span>
+                        <small class="text-muted ms-2">{{ getDuracionTexto() }}</small>
                       </div>
                     </div>
-                  </div>
-                  
-                  <!-- Funciones y Responsabilidades -->
-                  <div class="col-12">
-                    <FormField
-                      v-model="form.funciones"
-                      type="textarea"
-                      label="Funciones y Responsabilidades"
-                      icon="fas fa-tasks"
-                      placeholder="Describe las principales funciones que realizaste en este puesto..."
-                      :required="true"
-                      :rows="4"
-                      :error="errors.funciones"
-                      help-text="Describe detalladamente tus responsabilidades y logros en este puesto"
-                    />
                   </div>
                 </div>
               </form>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="cerrarModal" :disabled="guardando">
-                Cancelar
-              </button>
+              <button type="button" class="btn btn-secondary" @click="cerrarModal" :disabled="guardando">Cancelar</button>
               <button type="button" @click="guardarExperiencia" class="btn btn-success" :disabled="guardando || !isFormValid">
                 <span v-if="guardando" class="spinner-border spinner-border-sm me-2"></span>
                 <i v-else class="fas fa-save me-2"></i>
@@ -292,18 +158,14 @@
           </div>
         </div>
       </div>
-      
-      <!-- Backdrop del modal -->
-      <div v-if="mostrarModal" class="modal-backdrop fade show" @click="cerrarModal"></div>
 
-      <!-- Modal de confirmación de eliminación -->
+      <!-- Modal Confirmación -->
       <div class="modal fade" :class="{ show: mostrarConfirmacion }" :style="{ display: mostrarConfirmacion ? 'block' : 'none' }" tabindex="-1">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title text-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                Confirmar Eliminación
+                <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
               </h5>
               <button type="button" class="btn-close" @click="mostrarConfirmacion = false"></button>
             </div>
@@ -316,9 +178,7 @@
               <p class="text-muted small">Esta acción no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="mostrarConfirmacion = false" :disabled="eliminando">
-                Cancelar
-              </button>
+              <button type="button" class="btn btn-secondary" @click="mostrarConfirmacion = false" :disabled="eliminando">Cancelar</button>
               <button type="button" @click="eliminarExperiencia" class="btn btn-danger" :disabled="eliminando">
                 <span v-if="eliminando" class="spinner-border spinner-border-sm me-2"></span>
                 <i v-else class="fas fa-trash me-2"></i>
@@ -328,14 +188,14 @@
           </div>
         </div>
       </div>
-      
-      <!-- Backdrop del modal de confirmación -->
-      <div v-if="mostrarConfirmacion" class="modal-backdrop fade show" @click="mostrarConfirmacion = false"></div>
 
-      <!-- Mensaje de éxito/error -->
-      <div v-if="message" class="alert mt-4" :class="messageClass">
-        <i :class="messageIcon" class="me-2"></i>
-        {{ message }}
+      <!-- Backdrops -->
+      <div v-if="mostrarModal || mostrarConfirmacion" class="modal-backdrop fade show" 
+        @click="mostrarModal ? cerrarModal() : (mostrarConfirmacion = false)"></div>
+
+      <!-- Mensaje -->
+      <div v-if="message" class="alert mt-4" :class="`alert-${messageType}`">
+        <i :class="messageIcon" class="me-2"></i>{{ message }}
       </div>
     </div>
   </div>
@@ -352,137 +212,92 @@ import api from '../services/api'
 export default {
   name: 'ExperienciaLaboral',
   components: { FormField },
+  
   data() {
     return {
-      loading: false,
-      guardando: false,
-      eliminando: false,
-      mostrarModal: false,
-      mostrarConfirmacion: false,
-      editando: false,
-      trabajoActual: false,
-      message: '',
-      messageType: 'success',
-      debugMode: true, // Cambiar a false en producción
+      loading: false, guardando: false, eliminando: false, mostrarModal: false, mostrarConfirmacion: false,
+      editando: false, trabajoActual: false, message: '', messageType: 'success', debugMode: true,
       
-      experiencias: [],
-      experienciaAEliminar: null,
-      aspiranteId: null,
+      experiencias: [], experienciaAEliminar: null, aspiranteId: null,
       
       form: {
-        idExperiencia: null,
-        idAspirante: null,
-        puestoTrabajo: '',
-        nombreEmpresa: '',
-        fechaInicio: '',
-        fechaFin: '',
-        funciones: '',
-        telefonoEmpresa: ''
+        idExperiencia: null, idAspirante: null, puestoTrabajo: '', nombreEmpresa: '', 
+        fechaInicio: '', fechaFin: '', funciones: '', telefonoEmpresa: ''
       },
       
       errors: {},
-      tiposEmpleoOptions: TIPOS_EMPLEO,
-      nivelesPuestoOptions: NIVELES_PUESTO,
-      sectoresEmpresaOptions: SECTORES_EMPRESA
+      
+      // Configuraciones
+      accionesExp: [
+        { key: 'editar', label: 'Editar', icon: 'fas fa-edit', metodo: this.editarExperiencia },
+        { key: 'eliminar', label: 'Eliminar', icon: 'fas fa-trash', class: 'text-danger', metodo: this.confirmarEliminar }
+      ]
     }
   },
+  
   computed: {
     ...mapGetters(['user']),
     
-    fechaHoy() {
-      return new Date().toISOString().split('T')[0]
-    },
+    fechaHoy() { return new Date().toISOString().split('T')[0] },
     
     experienciasOrdenadas() {
       return [...this.experiencias].sort((a, b) => {
-        // Primero los trabajos actuales (sin fecha fin)
         if (!a.fechaFin && b.fechaFin) return -1
         if (a.fechaFin && !b.fechaFin) return 1
-        
-        // Luego por fecha de inicio (más reciente primero)
         return new Date(b.fechaInicio) - new Date(a.fechaInicio)
       })
     },
     
     isFormValid() {
-      return !this.errors.puestoTrabajo && 
-             !this.errors.nombreEmpresa && 
-             !this.errors.fechaInicio &&
-             !this.errors.fechaFin &&
-             !this.errors.funciones &&
-             this.form.puestoTrabajo && 
-             this.form.nombreEmpresa && 
-             this.form.fechaInicio &&
-             this.form.funciones &&
-             this.form.funciones.trim().length >= 10
-    },
-    
-    messageClass() {
-      return `alert-${this.messageType}`
+      return !Object.keys(this.errors).length && this.form.puestoTrabajo && this.form.nombreEmpresa && 
+             this.form.fechaInicio && this.form.funciones && this.form.funciones.trim().length >= 10
     },
     
     messageIcon() {
-      const icons = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle'
-      }
+      const icons = { success: 'fas fa-check-circle', error: 'fas fa-exclamation-circle', warning: 'fas fa-exclamation-triangle' }
       return icons[this.messageType] || 'fas fa-info-circle'
+    },
+    
+    camposForm() {
+      return [
+        { key: 'puestoTrabajo', label: 'Puesto de Trabajo', icon: 'fas fa-user-tie', placeholder: 'Desarrollador, Contador, Gerente...', required: true, 'help-text': 'Máximo 20 caracteres' },
+        { key: 'nombreEmpresa', label: 'Nombre de la Empresa', icon: 'fas fa-building', placeholder: 'Nombre de la empresa u organización', required: true, 'help-text': 'Máximo 50 caracteres' },
+        { key: 'fechaInicio', type: 'date', label: 'Fecha de Inicio', icon: 'fas fa-calendar-start', required: true, max: this.fechaHoy },
+        { key: 'telefonoEmpresa', type: 'tel', label: 'Teléfono de la Empresa', icon: 'fas fa-phone', placeholder: '0000-0000 (opcional)', 'help-text': 'Para referencias laborales' },
+        { key: 'funciones', type: 'textarea', label: 'Funciones y Responsabilidades', icon: 'fas fa-tasks', placeholder: 'Describe las principales funciones que realizaste en este puesto...', required: true, rows: 4, 'help-text': 'Describe detalladamente tus responsabilidades y logros en este puesto', colClass: 'col-12' }
+      ]
     }
   },
   
   async mounted() {
-    console.log('🔄 ExperienciaLaboral mounted, cargando datos...')
     await this.cargarAspiranteId()
-    if (this.aspiranteId) {
-      await this.cargarExperiencias()
-    }
+    if (this.aspiranteId) await this.cargarExperiencias()
   },
   
   methods: {
     async cargarAspiranteId() {
       try {
-        console.log('🔍 Buscando aspirante para usuario:', this.user?.idUsuario)
-        
-        // ✅ CORREGIDO: Buscar directamente en la tabla Aspirante
         const response = await api.get('/Aspirante/todos')
-        console.log('📋 Aspirantes encontrados:', response.data)
+        const aspirante = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
         
-        const aspiranteActual = response.data.find(asp => asp.idUsuario === this.user.idUsuario)
-        
-        if (aspiranteActual) {
-          this.aspiranteId = aspiranteActual.idAspirante
-          console.log('✅ Aspirante ID encontrado:', this.aspiranteId)
+        if (aspirante) {
+          this.aspiranteId = aspirante.idAspirante
         } else {
-          console.log('❌ No se encontró aspirante para el usuario:', this.user?.idUsuario)
           this.showMessage('No se encontró tu perfil de aspirante. Contacta al administrador.', 'error')
         }
-        
       } catch (error) {
-        console.error('❌ Error obteniendo ID de aspirante:', error)
         this.showMessage('Error al cargar tu perfil de aspirante', 'error')
       }
     },
     
     async cargarExperiencias() {
-      if (!this.aspiranteId) {
-        console.log('⚠️ No hay aspiranteId, no se pueden cargar experiencias')
-        return
-      }
+      if (!this.aspiranteId) return
       
       try {
         this.loading = true
-        console.log('💼 Cargando experiencias para aspirante:', this.aspiranteId)
-        
         const response = await aspiranteService.obtenerExperiencias()
-        console.log('📋 Todas las experiencias:', response)
-        
-        // Filtrar solo las experiencias del aspirante actual
         this.experiencias = response.filter(e => e.idAspirante === this.aspiranteId)
-        console.log('✅ Experiencias del aspirante:', this.experiencias)
-        
       } catch (error) {
-        console.error('❌ Error cargando experiencias:', error)
         this.showMessage('Error al cargar las experiencias laborales', 'error')
       } finally {
         this.loading = false
@@ -514,17 +329,12 @@ export default {
     async eliminarExperiencia() {
       try {
         this.eliminando = true
-        console.log('🗑️ Eliminando experiencia:', this.experienciaAEliminar.idExperiencia)
-        
         await aspiranteService.eliminarExperiencia(this.experienciaAEliminar.idExperiencia)
-        
         await this.cargarExperiencias()
         this.mostrarConfirmacion = false
         this.experienciaAEliminar = null
         this.showMessage('Experiencia laboral eliminada exitosamente', 'success')
-        
       } catch (error) {
-        console.error('❌ Error eliminando experiencia:', error)
         this.showMessage('Error al eliminar la experiencia laboral', 'error')
       } finally {
         this.eliminando = false
@@ -536,14 +346,8 @@ export default {
       this.editando = false
       this.trabajoActual = false
       this.form = {
-        idExperiencia: null,
-        idAspirante: null,
-        puestoTrabajo: '',
-        nombreEmpresa: '',
-        fechaInicio: '',
-        fechaFin: '',
-        funciones: '',
-        telefonoEmpresa: ''
+        idExperiencia: null, idAspirante: null, puestoTrabajo: '', nombreEmpresa: '', 
+        fechaInicio: '', fechaFin: '', funciones: '', telefonoEmpresa: ''
       }
       this.errors = {}
     },
@@ -580,7 +384,6 @@ export default {
         }
       }
       
-      // ✅ VALIDACIÓN CORREGIDA DE FUNCIONES
       if (!this.form.funciones || this.form.funciones.trim().length === 0) {
         this.errors.funciones = 'Las funciones son requeridas'
       } else if (this.form.funciones.trim().length < 10) {
@@ -591,13 +394,8 @@ export default {
     },
     
     async guardarExperiencia() {
-      if (!this.validateForm()) {
-        console.log('❌ Validación fallida, errores:', this.errors)
-        return
-      }
-      
-      if (!this.aspiranteId) {
-        this.showMessage('Error: No se pudo identificar tu perfil de aspirante', 'error')
+      if (!this.validateForm() || !this.aspiranteId) {
+        if (!this.aspiranteId) this.showMessage('Error: No se pudo identificar tu perfil de aspirante', 'error')
         return
       }
       
@@ -614,47 +412,22 @@ export default {
           telefonoEmpresa: this.form.telefonoEmpresa || null
         }
         
-        console.log('💾 Guardando experiencia:', experienciaData)
-        console.log('🔄 Editando:', this.editando)
-        
         if (this.editando) {
           experienciaData.idExperiencia = this.form.idExperiencia
-          console.log('📝 Actualizando experiencia existente con ID:', this.form.idExperiencia)
-          const response = await aspiranteService.actualizarExperiencia(experienciaData)
-          console.log('✅ Respuesta actualización:', response)
+          await aspiranteService.actualizarExperiencia(experienciaData)
           this.showMessage('Experiencia laboral actualizada exitosamente', 'success')
         } else {
-          console.log('🆕 Creando nueva experiencia')
-          const response = await aspiranteService.crearExperiencia(experienciaData)
-          console.log('✅ Respuesta creación:', response)
+          await aspiranteService.crearExperiencia(experienciaData)
           this.showMessage('Experiencia laboral agregada exitosamente', 'success')
         }
         
         await this.cargarExperiencias()
         this.cerrarModal()
-        
       } catch (error) {
-        console.error('❌ Error completo guardando experiencia:', error)
-        console.error('❌ Error response:', error.response)
-        console.error('❌ Error data:', error.response?.data)
-        console.error('❌ Error status:', error.response?.status)
-        console.error('❌ Error message:', error.message)
-        
-        // Mensaje de error más específico
         let errorMessage = 'Error al guardar la experiencia laboral'
-        if (error.response?.status === 400) {
-          errorMessage = `Error de datos: ${error.response.data || 'Datos inválidos'}`
-        } else if (error.response?.status === 401) {
-          errorMessage = 'Error de autenticación. Inicia sesión nuevamente.'
-        } else if (error.response?.status === 403) {
-          errorMessage = 'No tienes permisos para realizar esta acción'
-        } else if (error.response?.status === 404) {
-          errorMessage = 'Endpoint no encontrado. Verifica la configuración de la API.'
-        } else if (error.response?.status === 500) {
-          errorMessage = 'Error del servidor. Contacta al administrador.'
-        } else if (error.message.includes('Network Error')) {
-          errorMessage = 'Error de conexión. Verifica tu internet.'
-        }
+        if (error.response?.status === 400) errorMessage = `Error de datos: ${error.response.data || 'Datos inválidos'}`
+        else if (error.response?.status === 401) errorMessage = 'Error de autenticación. Inicia sesión nuevamente.'
+        else if (error.response?.status === 500) errorMessage = 'Error del servidor. Contacta al administrador.'
         
         this.showMessage(errorMessage, 'error')
       } finally {
@@ -663,11 +436,7 @@ export default {
     },
     
     getEstadoExperiencia() {
-      if (!this.form.fechaFin || this.trabajoActual) {
-        return 'Trabajo Actual'
-      } else {
-        return 'Trabajo Anterior'
-      }
+      return (!this.form.fechaFin || this.trabajoActual) ? 'Trabajo Actual' : 'Trabajo Anterior'
     },
     
     getEstadoColor() {
@@ -676,20 +445,39 @@ export default {
     
     getDuracionTexto() {
       if (!this.form.fechaInicio) return ''
-      
       const inicio = this.form.fechaInicio
       const fin = this.trabajoActual ? null : this.form.fechaFin
-      
       return this.calcularDuracion(inicio, fin)
+    },
+    
+    getInfoItems(experiencia) {
+      const items = [
+        {
+          key: 'fechas',
+          icon: 'fas fa-calendar-alt',
+          text: `${this.formatFecha(experiencia.fechaInicio)}${experiencia.fechaFin ? ` - ${this.formatFecha(experiencia.fechaFin)}` : ' - <span class="text-success">Actualidad</span>'}`
+        },
+        {
+          key: 'duracion',
+          icon: 'fas fa-clock',
+          text: this.calcularDuracion(experiencia.fechaInicio, experiencia.fechaFin)
+        }
+      ]
+      
+      if (experiencia.telefonoEmpresa) {
+        items.push({
+          key: 'telefono',
+          icon: 'fas fa-phone',
+          text: experiencia.telefonoEmpresa
+        })
+      }
+      
+      return items
     },
     
     formatFecha(fecha) {
       if (!fecha) return ''
-      const date = new Date(fecha)
-      return date.toLocaleDateString('es-ES', { 
-        year: 'numeric', 
-        month: 'short' 
-      })
+      return new Date(fecha).toLocaleDateString('es-ES', { year: 'numeric', month: 'short' })
     },
     
     calcularDuracion(fechaInicio, fechaFin) {
@@ -697,7 +485,6 @@ export default {
       
       const inicio = new Date(fechaInicio)
       const fin = fechaFin ? new Date(fechaFin) : new Date()
-      
       const diffTime = Math.abs(fin - inicio)
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
       const diffMonths = Math.floor(diffDays / 30)
@@ -723,209 +510,49 @@ export default {
 </script>
 
 <style scoped>
-.experiencia-laboral {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  min-height: 100vh;
-}
+.experiencia-laboral { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); min-height: 100vh; }
 
-/* Timeline Styles */
-.timeline {
-  position: relative;
-  padding-left: 2rem;
-}
+.timeline { position: relative; padding-left: 2rem; }
+.timeline::before { content: ''; position: absolute; left: 1rem; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, #10b981, #d1fae5); }
+.timeline-item { position: relative; margin-bottom: 2rem; }
+.timeline-marker { position: absolute; left: -2.25rem; top: 1rem; width: 2.5rem; height: 2.5rem; background: #10b981; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.875rem; box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3); z-index: 2; }
+.timeline-item-current .timeline-marker { background: linear-gradient(135deg, #10b981, #059669); animation: pulse-success 2s infinite; }
+@keyframes pulse-success { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+.timeline-content { margin-left: 1rem; }
 
-.timeline::before {
-  content: '';
-  position: absolute;
-  left: 1rem;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: linear-gradient(to bottom, #10b981, #d1fae5);
-}
+.experiencia-card { border: none; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.experiencia-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15); }
+.timeline-item-current .experiencia-card { border-left: 4px solid #10b981; }
 
-.timeline-item {
-  position: relative;
-  margin-bottom: 2rem;
-}
+.info-item { display: flex; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.funciones-section { background: #f8fafc; border-radius: 10px; padding: 1rem; border-left: 4px solid #10b981; }
+.funciones-content { font-size: 0.9rem; line-height: 1.5; color: #4b5563; white-space: pre-line; }
 
-.timeline-marker {
-  position: absolute;
-  left: -2.25rem;
-  top: 1rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  background: #10b981;
-  border: 3px solid white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 0.875rem;
-  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
-  z-index: 2;
-}
+.modal.show { background: rgba(0, 0, 0, 0.5); }
+.modal-content { border-radius: 15px; border: none; }
+.modal-header { border-bottom: 1px solid #e5e7eb; border-radius: 15px 15px 0 0; }
+.modal-footer { border-top: 1px solid #e5e7eb; border-radius: 0 0 15px 15px; }
 
-.timeline-item-current .timeline-marker {
-  background: linear-gradient(135deg, #10b981, #059669);
-  animation: pulse-success 2s infinite;
-}
+.form-check-input:checked { background-color: #10b981; border-color: #10b981; }
+.form-check-label { font-weight: 500; color: #374151; }
 
-@keyframes pulse-success {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-  }
-}
+.btn { border-radius: 8px; font-weight: 500; transition: all 0.2s ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn-success { background: linear-gradient(135deg, #10b981, #059669); border: none; }
+.btn-success:hover { background: linear-gradient(135deg, #059669, #047857); }
 
-.timeline-content {
-  margin-left: 1rem;
-}
+.badge { font-size: 0.75rem; padding: 0.35em 0.65em; }
 
-.experiencia-card {
-  border: none;
-  border-radius: 15px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+.dropdown-toggle::after { display: none; }
+.dropdown-menu { border-radius: 10px; border: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.dropdown-item { border-radius: 5px; margin: 0.125rem; transition: all 0.2s ease; }
+.dropdown-item:hover { background-color: #f3f4f6; transform: translateX(2px); }
 
-.experiencia-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15);
-}
-
-.timeline-item-current .experiencia-card {
-  border-left: 4px solid #10b981;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.funciones-section {
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 1rem;
-  border-left: 4px solid #10b981;
-}
-
-.funciones-content {
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: #4b5563;
-  white-space: pre-line;
-}
-
-/* Modal Styles */
-.modal.show {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  border-radius: 15px;
-  border: none;
-}
-
-.modal-header {
-  border-bottom: 1px solid #e5e7eb;
-  border-radius: 15px 15px 0 0;
-}
-
-.modal-footer {
-  border-top: 1px solid #e5e7eb;
-  border-radius: 0 0 15px 15px;
-}
-
-/* Form Styles */
-.form-check-input:checked {
-  background-color: #10b981;
-  border-color: #10b981;
-}
-
-.form-check-label {
-  font-weight: 500;
-  color: #374151;
-}
-
-/* Button Styles */
-.btn {
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
-.btn-success {
-  background: linear-gradient(135deg, #10b981, #059669);
-  border: none;
-}
-
-.btn-success:hover {
-  background: linear-gradient(135deg, #059669, #047857);
-}
-
-/* Badge Styles */
-.badge {
-  font-size: 0.75rem;
-  padding: 0.35em 0.65em;
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-  .timeline {
-    padding-left: 1.5rem;
-  }
-  
-  .timeline::before {
-    left: 0.75rem;
-  }
-  
-  .timeline-marker {
-    left: -1.75rem;
-    width: 2rem;
-    height: 2rem;
-  }
-  
-  .timeline-content {
-    margin-left: 0.5rem;
-  }
-  
-  .modal-dialog {
-    margin: 1rem;
-  }
-}
-
-/* Dropdown Styles */
-.dropdown-toggle::after {
-  display: none;
-}
-
-.dropdown-menu {
-  border-radius: 10px;
-  border: none;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.dropdown-item {
-  border-radius: 5px;
-  margin: 0.125rem;
-  transition: all 0.2s ease;
-}
-
-.dropdown-item:hover {
-  background-color: #f3f4f6;
-  transform: translateX(2px);
+  .timeline { padding-left: 1.5rem; }
+  .timeline::before { left: 0.75rem; }
+  .timeline-marker { left: -1.75rem; width: 2rem; height: 2rem; }
+  .timeline-content { margin-left: 0.5rem; }
+  .modal-dialog { margin: 1rem; }
 }
 </style>

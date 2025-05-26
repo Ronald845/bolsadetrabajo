@@ -5,63 +5,41 @@
       <div class="col-12">
         <ul class="nav nav-tabs mb-4">
           <li class="nav-item">
-            <a
-              class="nav-link"
-              :class="{ active: currentTab === 'dashboard' }"
-              href="#"
-              @click.prevent="currentTab = 'dashboard'"
-            >
+            <a class="nav-link" :class="{ active: currentTab === 'dashboard' }" href="#" @click.prevent="currentTab = 'dashboard'">
               <i class="fas fa-home me-2"></i>Dashboard
             </a>
           </li>
           <li class="nav-item">
-            <a
-              class="nav-link"
-              :class="{ active: currentTab === 'perfil' }"
-              href="#"
-              @click.prevent="currentTab = 'perfil'"
-            >
+            <a class="nav-link" :class="{ active: currentTab === 'perfil' }" href="#" @click.prevent="currentTab = 'perfil'">
               <i class="fas fa-building me-2"></i>Mi Empresa
             </a>
           </li>
           <li class="nav-item">
-            <a
-              class="nav-link"
-              :class="{ active: currentTab === 'ofertas' }"
-              href="#"
-              @click.prevent="currentTab = 'ofertas'"
-            >
+            <a class="nav-link" :class="{ active: currentTab === 'ofertas' }" href="#" @click.prevent="currentTab = 'ofertas'">
               <i class="fas fa-briefcase me-2"></i>Mis Ofertas
               <span v-if="contadorOfertas > 0" class="badge bg-primary ms-1">{{ contadorOfertas }}</span>
             </a>
           </li>
           <li class="nav-item">
-            <a
-              class="nav-link"
-              :class="{ active: currentTab === 'crear-oferta' }"
-              href="#"
-              @click.prevent="currentTab = 'crear-oferta'"
-            >
+            <a class="nav-link" :class="{ active: currentTab === 'crear-oferta' }" href="#" @click.prevent="currentTab = 'crear-oferta'">
               <i class="fas fa-plus me-2"></i>Nueva Oferta
             </a>
           </li>
+          <!-- 🆕 NUEVA PESTAÑA: Buscar Candidatos -->
           <li class="nav-item">
-            <a
-              class="nav-link"
-              :class="{ active: currentTab === 'aplicaciones' }"
-              href="#"
-              @click.prevent="currentTab = 'aplicaciones'"
-            >
+            <a class="nav-link search-candidates-tab" :class="{ active: currentTab === 'buscar-candidatos' }" href="#" @click.prevent="currentTab = 'buscar-candidatos'">
+              <i class="fas fa-search me-2"></i>Buscar Candidatos
+              <span class="badge bg-success ms-1">¡Nuevo!</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" :class="{ active: currentTab === 'aplicaciones' }" href="#" @click.prevent="currentTab = 'aplicaciones'">
               <i class="fas fa-users me-2"></i>Candidatos
               <span v-if="contadorAplicaciones > 0" class="badge bg-warning ms-1">{{ contadorAplicaciones }}</span>
             </a>
           </li>
           <li class="nav-item">
-            <a
-              class="nav-link disabled"
-              href="#"
-              @click.prevent=""
-            >
+            <a class="nav-link disabled" href="#" @click.prevent="">
               <i class="fas fa-chart-bar me-2"></i>Reportes
               <span class="badge bg-warning ms-1">Próximo</span>
             </a>
@@ -104,6 +82,14 @@
           @volver-ofertas="volverOfertas"
           @oferta-guardada="handleOfertaGuardada"
         />
+
+        <!-- 🆕 NUEVO COMPONENTE: Buscar Candidatos -->
+        <BusquedaCandidatos 
+          v-else-if="currentTab === 'buscar-candidatos'"
+          @volver-dashboard="volverDashboard"
+          @contactar-candidato="handleContactoCandidato"
+          @invitar-candidato="handleInvitacionCandidato"
+        />
        
         <!-- Aplicaciones Recibidas -->
         <AplicacionesRecibidas 
@@ -128,27 +114,30 @@
       </div>
     </div>
 
-    <!-- Toast de notificaciones -->
-    <div 
-      v-if="showToast" 
-      class="toast-container position-fixed bottom-0 end-0 p-3"
-    >
-      <div 
-        class="toast show" 
-        :class="toastClass"
-        role="alert"
-      >
+    <!-- Sistema de notificaciones principales -->
+    <div v-if="showToast" class="toast-container position-fixed bottom-0 end-0 p-3">
+      <div class="toast show" :class="toastClass" role="alert">
         <div class="toast-header">
           <i :class="toastIcon" class="me-2"></i>
           <strong class="me-auto">{{ toastTitle }}</strong>
-          <button 
-            type="button" 
-            class="btn-close" 
-            @click="hideToast"
-          ></button>
+          <button type="button" class="btn-close" @click="hideToast"></button>
         </div>
         <div class="toast-body">
           {{ toastMessage }}
+        </div>
+      </div>
+    </div>
+
+    <!-- 🆕 Toast específico para búsqueda de candidatos -->
+    <div v-if="showCandidateToast" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+      <div class="toast show bg-success text-white" role="alert">
+        <div class="toast-header bg-success text-white">
+          <i class="fas fa-search me-2"></i>
+          <strong class="me-auto">Búsqueda de Candidatos</strong>
+          <button type="button" class="btn-close btn-close-white" @click="showCandidateToast = false"></button>
+        </div>
+        <div class="toast-body">
+          {{ candidateToastMessage }}
         </div>
       </div>
     </div>
@@ -156,12 +145,15 @@
 </template>
 
 <script>
-// ✅ IMPORTACIONES REALES
+// ✅ IMPORTACIONES EXISTENTES
 import EmpresaDashboard from '../components/EmpresaDashboard.vue'
 import PerfilEmpresa from '../components/PerfilEmpresa.vue'
 import GestionOfertas from '../components/GestionOfertas.vue'
 import CrearOferta from '../components/CrearOferta.vue'
 import AplicacionesRecibidas from '../components/AplicacionesRecibidas.vue'
+
+// 🆕 NUEVA IMPORTACIÓN
+import BusquedaCandidatos from '../components/BusquedaCandidatos.vue'
 
 // 🚧 Componente temporal para estadísticas (próximamente)
 const EstadisticasEmpresa = {
@@ -183,12 +175,8 @@ const EstadisticasEmpresa = {
                 <strong>Próximamente:</strong> Dashboard completo con gráficos interactivos, 
                 exportación de reportes y análisis predictivo.
               </div>
-              <button 
-                class="btn btn-primary btn-lg"
-                @click="$emit('volver-dashboard')"
-              >
-                <i class="fas fa-home me-2"></i>
-                Volver al Dashboard
+              <button class="btn btn-primary btn-lg" @click="$emit('volver-dashboard')">
+                <i class="fas fa-home me-2"></i>Volver al Dashboard
               </button>
             </div>
           </div>
@@ -206,6 +194,7 @@ export default {
     GestionOfertas,
     CrearOferta,
     AplicacionesRecibidas,
+    BusquedaCandidatos, // 🆕 COMPONENTE AGREGADO
     EstadisticasEmpresa
   },
   data() {
@@ -221,12 +210,17 @@ export default {
       contadorOfertas: 0,
       contadorAplicaciones: 0,
       
-      // Sistema de notificaciones
+      // Sistema de notificaciones optimizado
       showToast: false,
       toastMessage: '',
       toastTitle: 'Notificación',
       toastType: 'success',
-      toastTimeout: null
+      toastTimeout: null,
+
+      // 🆕 Sistema de notificaciones para candidatos
+      showCandidateToast: false,
+      candidateToastMessage: '',
+      candidateToastTimeout: null
     }
   },
   
@@ -267,6 +261,8 @@ export default {
         'aplicaciones': 'aplicaciones',
         'candidatos': 'aplicaciones',
         'ver-candidatos': 'aplicaciones',
+        'buscar-candidatos': 'buscar-candidatos', // 🆕 NUEVA NAVEGACIÓN
+        'buscar-talento': 'buscar-candidatos', // 🆕 ALIAS
         'estadisticas': 'estadisticas',
         'reportes': 'estadisticas'
       }
@@ -282,6 +278,11 @@ export default {
         
         this.currentTab = nuevaSeccion
         console.log('✅ Navegando a pestaña:', nuevaSeccion)
+
+        // 🆕 Mostrar mensaje especial para búsqueda de candidatos
+        if (nuevaSeccion === 'buscar-candidatos') {
+          this.showCandidateToastMessage('¡Nueva funcionalidad! Ahora puedes buscar candidatos ideales para tu empresa')
+        }
       }
     },
     
@@ -324,6 +325,31 @@ export default {
           console.warn('⚠️ Evento no reconocido:', evento)
           this.showWarningToast(`Acción no reconocida: ${evento}`)
       }
+    },
+
+    // 🆕 NUEVOS MÉTODOS para manejar eventos de búsqueda de candidatos
+    handleContactoCandidato(candidato) {
+      console.log('📧 Manejando contacto con candidato:', candidato.nombreCompleto)
+      
+      // TODO: Implementar modal de contacto o integración con email
+      this.showCandidateToastMessage(`Preparando contacto con ${candidato.nombreCompleto}...`)
+      
+      // Simular proceso de contacto
+      setTimeout(() => {
+        this.showSuccessToast(`Mensaje enviado a ${candidato.nombreCompleto}`)
+      }, 2000)
+    },
+
+    handleInvitacionCandidato(candidato) {
+      console.log('📨 Manejando invitación a candidato:', candidato.nombreCompleto)
+      
+      // TODO: Implementar modal de selección de oferta
+      this.showCandidateToastMessage(`Invitando a ${candidato.nombreCompleto} a una de tus ofertas...`)
+      
+      // Simular proceso de invitación
+      setTimeout(() => {
+        this.showSuccessToast(`Invitación enviada a ${candidato.nombreCompleto}`)
+      }, 2000)
     },
     
     handleOfertaGuardada(oferta, esEdicion = false) {
@@ -368,6 +394,7 @@ export default {
       this.ofertaSeleccionada = null
     },
     
+    // Sistema de notificaciones principales optimizado
     showSuccessToast(mensaje, titulo = 'Éxito') {
       this.showToastMessage(mensaje, 'success', titulo)
     },
@@ -400,6 +427,22 @@ export default {
         this.hideToast()
       }, 5000)
     },
+
+    // 🆕 Sistema de notificaciones para candidatos optimizado
+    showCandidateToastMessage(mensaje) {
+      if (this.candidateToastTimeout) {
+        clearTimeout(this.candidateToastTimeout)
+      }
+      
+      this.candidateToastMessage = mensaje
+      this.showCandidateToast = true
+      
+      console.log(`🔔 Candidate Toast: ${mensaje}`)
+      
+      this.candidateToastTimeout = setTimeout(() => {
+        this.showCandidateToast = false
+      }, 6000) // 6 segundos para mensajes de candidatos
+    },
     
     hideToast() {
       this.showToast = false
@@ -422,6 +465,16 @@ export default {
   watch: {
     currentTab(nuevaTab, tabAnterior) {
       console.log(`🔄 Cambio de pestaña: ${tabAnterior} → ${nuevaTab}`)
+      
+      // 🆕 Lógica especial para la pestaña de búsqueda de candidatos
+      if (nuevaTab === 'buscar-candidatos' && tabAnterior !== 'buscar-candidatos') {
+        console.log('🔍 Entrando por primera vez a búsqueda de candidatos')
+        
+        // Mostrar tips de uso después de 3 segundos
+        setTimeout(() => {
+          this.showCandidateToastMessage('💡 Tip: Usa los filtros avanzados para encontrar candidatos más específicos')
+        }, 3000)
+      }
     }
   },
   
@@ -432,6 +485,11 @@ export default {
     setTimeout(() => {
       this.actualizarContadores({ ofertas: 5, aplicaciones: 12 })
     }, 1000)
+
+    // 🆕 Mostrar notificación de nueva funcionalidad al cargar
+    setTimeout(() => {
+      this.showCandidateToastMessage('🎉 ¡Nueva funcionalidad disponible! Ahora puedes buscar candidatos ideales')
+    }, 2000)
   },
   
   beforeUnmount() {
@@ -440,6 +498,11 @@ export default {
     if (this.toastTimeout) {
       clearTimeout(this.toastTimeout)
     }
+
+    // 🆕 Limpiar timeout de candidatos
+    if (this.candidateToastTimeout) {
+      clearTimeout(this.candidateToastTimeout)
+    }
     
     this.limpiarEstados()
   }
@@ -447,7 +510,7 @@ export default {
 </script>
 
 <style scoped>
-/* === ESTILOS DE PESTAÑAS === */
+/* === ESTILOS DE PESTAÑAS OPTIMIZADOS === */
 .nav-tabs .nav-link {
   color: #6c757d;
   border: none;
@@ -484,6 +547,34 @@ export default {
   background: none;
 }
 
+/* 🆕 ESTILOS ESPECIALES PARA BÚSQUEDA DE CANDIDATOS */
+.search-candidates-tab {
+  position: relative;
+  background: linear-gradient(135deg, transparent 0%, rgba(40, 167, 69, 0.05) 100%);
+}
+
+.search-candidates-tab:hover,
+.search-candidates-tab.active {
+  color: #28a745 !important;
+  border-bottom-color: #28a745 !important;
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
+}
+
+.search-candidates-tab::after {
+  background: linear-gradient(90deg, #28a745, #20c997) !important;
+}
+
+.search-candidates-tab .badge.bg-success {
+  background: linear-gradient(135deg, #28a745, #20c997) !important;
+  animation: pulse-success 2s infinite;
+}
+
+@keyframes pulse-success {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .nav-tabs {
   border-bottom: 1px solid #dee2e6;
   margin-bottom: 2rem;
@@ -497,15 +588,6 @@ export default {
   border-radius: 12px;
   position: relative;
   top: -2px;
-}
-
-.nav-tabs .nav-link .badge.bg-primary {
-  background-color: #007bff !important;
-}
-
-.nav-tabs .nav-link .badge.bg-warning {
-  background-color: #ffc107 !important;
-  color: #000 !important;
 }
 
 /* === INDICADOR DE PROGRESO EN PESTAÑAS === */
@@ -531,20 +613,12 @@ export default {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* === SISTEMA DE TOASTS === */
-.toast-container {
-  z-index: 1055;
-}
+/* === SISTEMA DE TOASTS OPTIMIZADO === */
+.toast-container { z-index: 1055; }
 
 .toast {
   border: none;
@@ -553,96 +627,84 @@ export default {
   max-width: 350px;
 }
 
-.toast.bg-success {
-  background: linear-gradient(135deg, #28a745, #20c997) !important;
-}
-
-.toast.bg-danger {
-  background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
-}
-
-.toast.bg-warning {
-  background: linear-gradient(135deg, #ffc107, #f39c12) !important;
-}
-
-.toast.bg-info {
-  background: linear-gradient(135deg, #17a2b8, #3498db) !important;
-}
+.toast.bg-success { background: linear-gradient(135deg, #28a745, #20c997) !important; }
+.toast.bg-danger { background: linear-gradient(135deg, #dc3545, #e74c3c) !important; }
+.toast.bg-warning { background: linear-gradient(135deg, #ffc107, #f39c12) !important; }
+.toast.bg-info { background: linear-gradient(135deg, #17a2b8, #3498db) !important; }
 
 .toast-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.1);
 }
 
-.toast-body {
-  font-weight: 500;
+.toast-body { font-weight: 500; }
+
+/* 🆕 Toast específico para candidatos con animación */
+.toast-container .toast.bg-success {
+  animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
-  .nav-tabs {
-    flex-wrap: wrap;
-  }
-
-  .nav-item {
-    margin-bottom: 0.25rem;
-  }
-
-  .nav-link {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.9rem;
-  }
-  
-  .nav-tabs .nav-link .badge {
-    font-size: 0.55rem;
-    padding: 0.15em 0.35em;
-  }
+  .nav-tabs { flex-wrap: wrap; }
+  .nav-item { margin-bottom: 0.25rem; }
+  .nav-link { padding: 0.5rem 0.75rem; font-size: 0.9rem; }
+  .nav-tabs .nav-link .badge { font-size: 0.55rem; padding: 0.15em 0.35em; }
 }
 
 @media (max-width: 576px) {
-  .nav-tabs .nav-link {
-    font-size: 0.8rem;
-    padding: 0.4rem 0.6rem;
-  }
-
-  .nav-tabs .nav-link i {
-    display: none;
-  }
-  
-  .nav-tabs .nav-link .badge {
-    font-size: 0.5rem;
-    padding: 0.1em 0.3em;
-  }
-
-  .toast {
-    max-width: 280px;
-    font-size: 0.9rem;
-  }
-}
-
-/* === COLORES ESPECÍFICOS PARA EMPRESA (AZUL) === */
-.nav-tabs .nav-link:hover:not(.disabled) {
-  color: #007bff;
-  border-bottom-color: #007bff;
-}
-
-.nav-tabs .nav-link.active {
-  color: #007bff;
-  border-bottom-color: #007bff;
-}
-
-.nav-tabs .nav-link::after {
-  background: linear-gradient(90deg, #007bff, #0056b3);
+  .nav-tabs .nav-link { font-size: 0.8rem; padding: 0.4rem 0.6rem; }
+  .nav-tabs .nav-link i { display: none; }
+  .nav-tabs .nav-link .badge { font-size: 0.5rem; padding: 0.1em 0.3em; }
+  .toast { max-width: 280px; font-size: 0.9rem; }
+  .search-candidates-tab { font-weight: 600; }
 }
 
 /* === UTILIDADES === */
-.gap-2 {
-  gap: 0.5rem;
-}
-
 .container-fluid {
   background: linear-gradient(135deg, #f8f9fc 0%, #e9ecef 100%);
   min-height: 100vh;
   padding-bottom: 2rem;
 }
+
+/* 🆕 Indicador de nueva funcionalidad */
+.search-candidates-tab .badge {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 5px rgba(40, 167, 69, 0.5); }
+  to { box-shadow: 0 0 10px rgba(40, 167, 69, 0.8); }
+}
+
+/* === ACCESIBILIDAD === */
+.nav-link:focus {
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  outline: none;
+}
+
+.search-candidates-tab:focus {
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* === PREVENT LAYOUT SHIFT === */
+.nav-tabs .nav-link {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+
+/* === TRANSICIONES SUAVES === */
+* {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* === OPTIMIZACIONES DE RENDIMIENTO === */
+.container-fluid * { will-change: auto; }
+.nav-tabs .nav-link { contain: layout style; }
 </style>
