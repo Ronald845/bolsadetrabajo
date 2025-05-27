@@ -282,4 +282,48 @@ export const POSICIONES_LOGRO = [
   { value: 'Completado', label: 'Completado/Logrado', icon: 'fas fa-check-circle', color: 'success' }
 ]
 
+// 🆕 AGREGAR AL FINAL DE constants.js
 
+// GÉNEROS DISPONIBLES
+export const GENEROS = [
+  { value: 'Masculino', label: 'Masculino' },
+  { value: 'Femenino', label: 'Femenino' },
+  { value: 'Otro', label: 'Otro' },
+  { value: 'Prefiero no decir', label: 'Prefiero no decir' }
+]
+
+// TIPOS DE DOCUMENTO DE IDENTIDAD
+export const TIPOS_DOCUMENTO_IDENTIDAD = [
+  { value: 'DUI', label: 'DUI (Documento Único de Identidad)' },
+  { value: 'Pasaporte', label: 'Pasaporte' },
+  { value: 'Cedula', label: 'Cédula de Identidad' }
+]
+
+// FORMATOS DE DOCUMENTOS SALVADOREÑOS
+export const FORMATOS_DOCUMENTO = {
+  DUI: {
+    pattern: /^\d{8}-\d$/,
+    placeholder: '12345678-9',
+    ejemplo: 'Ejemplo: 03458765-2'
+  },
+  NIT: {
+    pattern: /^\d{4}-\d{6}-\d{3}-\d$/,
+    placeholder: '1234-567890-123-4',
+    ejemplo: 'Ejemplo: 0614-251289-105-3'
+  },
+  NUP: {
+    pattern: /^[A-Z]{2}\d{6,10}$/,
+    placeholder: 'AB123456',
+    ejemplo: 'Ejemplo: PE1234567890'
+  },
+  Pasaporte: {
+    pattern: /^[A-Z0-9]{6,9}$/,
+    placeholder: 'AB123456',
+    ejemplo: 'Ejemplo: P1234567'
+  },
+  Cedula: {
+    pattern: /^[\d-]{8,15}$/,
+    placeholder: '12345678',
+    ejemplo: 'Según país de origen'
+  }
+}

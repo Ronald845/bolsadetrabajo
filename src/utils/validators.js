@@ -348,3 +348,123 @@ export const displayUtils = {
     return 'Más de 1 año'
   }
 }
+
+
+// Agregar al final del archivo validators.js existente
+
+// 🆕 VALIDACIONES ESPECÍFICAS PARA EL SALVADOR
+export const validadoresSalvador = {
+  // Validar DUI salvadoreño
+  dui: (value) => {
+    if (!value) return true // Opcional
+    const duiPattern = /^\d{8}-\d$/
+    return duiPattern.test(value)
+  },
+  
+  // Validar NIT salvadoreño
+  nit: (value) => {
+    if (!value) return true // Opcional
+    const nitPattern = /^\d{4}-\d{6}-\d{3}-\d$/
+    return nitPattern.test(value)
+  },
+  
+  // Validar NUP (Número Único Provisional)
+  nup: (value) => {
+    if (!value) return true // Opcional
+    const nupPattern = /^[A-Z]{2}\d{6,10}$/
+    return nupPattern.test(value)
+  },
+  
+  // Validar fecha de nacimiento
+  fechaNacimiento: (value) => {
+    if (!value) return true // Opcional
+    
+    const fecha = new Date(value)
+    const hoy = new Date()
+    const hace120Anos = new Date()
+    hace120Anos.setFullYear(hoy.getFullYear() - 120)
+    
+    return fecha <= hoy && fecha >= hace120Anos
+  },
+  
+  // Validar edad mínima
+  edadMinima: (fechaNacimiento, edadMinima = 16) => {
+    if (!fechaNacimiento) return true
+    
+    const fecha = new Date(fechaNacimiento)
+    const hoy = new Date()
+    const edad = hoy.getFullYear() - fecha.getFullYear()
+    const cumplioEsteAno = hoy >= new Date(hoy.getFullYear(), fecha.getMonth(), fecha.getDate())
+    
+    return cumplioEsteAno ? edad >= edadMinima : (edad - 1) >= edadMinima
+  },
+  
+  // Validar URLs de redes sociales
+  redesSociales: (value) => {
+    if (!value) return true // Opcional
+    
+    // Permitir URLs, handles (con @) o texto libre
+    const urlPattern = /^https?:\/\/.+/
+    const handlePattern = /^@.+/
+    
+    return urlPattern.test(value) || handlePattern.test(value) || value.length <= 500
+  }
+}
+
+// 🆕 MENSAJES DE ERROR ESPECÍFICOS
+export const erroresSalvador = {
+  dui: 'El DUI debe tener el formato: 12345678-9',
+  nit: 'El NIT debe tener el formato: 1234-567890-123-4',
+  nup: 'El NUP debe tener el formato: AB123456 (2 letras seguidas de números)',
+  fechaNacimiento: 'La fecha de nacimiento no es válida',
+  edadMinima: 'Debe ser mayor de 16 años',
+  redesSociales: 'Las redes sociales pueden ser URLs, handles (@usuario) o texto libre (máx. 500 caracteres)'
+}
+
+// 🆕 HELPER PARA FORMATEAR DOCUMENTOS MIENTRAS SE ESCRIBE
+export const formatearDocumento = {
+  dui: (value) => {
+    // Remover todo excepto números
+    const numeros = value.replace(/\D/g, '')
+    
+    // Aplicar formato 12345678-9
+    if (numeros.length >= 8) {
+      return `${numeros.slice(0, 8)}-${numeros.slice(8, 9)}`
+    }
+    return numeros
+  },
+  
+  nit: (value) => {
+    // Remover todo excepto números
+    const numeros = value.replace(/\D/g, '')
+    
+    // Aplicar formato 1234-567890-123-4
+    if (numeros.length >= 14) {
+      return `${numeros.slice(0, 4)}-${numeros.slice(4, 10)}-${numeros.slice(10, 13)}-${numeros.slice(13, 14)}`
+    } else if (numeros.length >= 10) {
+      return `${numeros.slice(0, 4)}-${numeros.slice(4, 10)}-${numeros.slice(10)}`
+    } else if (numeros.length >= 4) {
+      return `${numeros.slice(0, 4)}-${numeros.slice(4)}`
+    }
+    return numeros
+  },
+  
+  nup: (value) => {
+    // Mantener letras en mayúscula y números
+    return value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  }
+}
+
+// 🆕 CALCULADORA DE EDAD
+export const calcularEdad = (fechaNacimiento) => {
+  if (!fechaNacimiento) return null
+  
+  const fecha = new Date(fechaNacimiento)
+  const hoy = new Date()
+  let edad = hoy.getFullYear() - fecha.getFullYear()
+  const cumplioEsteAno = hoy >= new Date(hoy.getFullYear(), fecha.getMonth(), fecha.getDate())
+  
+  if (!cumplioEsteAno) edad--
+  
+  return edad
+}

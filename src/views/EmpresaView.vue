@@ -25,7 +25,6 @@
               <i class="fas fa-plus me-2"></i>Nueva Oferta
             </a>
           </li>
-          <!-- 🆕 NUEVA PESTAÑA: Buscar Candidatos -->
           <li class="nav-item">
             <a class="nav-link search-candidates-tab" :class="{ active: currentTab === 'buscar-candidatos' }" href="#" @click.prevent="currentTab = 'buscar-candidatos'">
               <i class="fas fa-search me-2"></i>Buscar Candidatos
@@ -36,12 +35,6 @@
             <a class="nav-link" :class="{ active: currentTab === 'aplicaciones' }" href="#" @click.prevent="currentTab = 'aplicaciones'">
               <i class="fas fa-users me-2"></i>Candidatos
               <span v-if="contadorAplicaciones > 0" class="badge bg-warning ms-1">{{ contadorAplicaciones }}</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link disabled" href="#" @click.prevent="">
-              <i class="fas fa-chart-bar me-2"></i>Reportes
-              <span class="badge bg-warning ms-1">Próximo</span>
             </a>
           </li>
         </ul>
@@ -83,7 +76,7 @@
           @oferta-guardada="handleOfertaGuardada"
         />
 
-        <!-- 🆕 NUEVO COMPONENTE: Buscar Candidatos -->
+        <!-- Buscar Candidatos -->
         <BusquedaCandidatos 
           v-else-if="currentTab === 'buscar-candidatos'"
           @volver-dashboard="volverDashboard"
@@ -98,12 +91,6 @@
           @volver-dashboard="volverDashboard"
           @volver-ofertas="volverOfertas"
           @actualizar-contadores="actualizarContadores"
-        />
-       
-        <!-- Reportes y Estadísticas (Placeholder) -->
-        <EstadisticasEmpresa 
-          v-else-if="currentTab === 'estadisticas'"
-          @volver-dashboard="volverDashboard"
         />
         
         <!-- Componente por defecto en caso de error -->
@@ -128,7 +115,7 @@
       </div>
     </div>
 
-    <!-- 🆕 Toast específico para búsqueda de candidatos -->
+    <!-- Toast específico para búsqueda de candidatos -->
     <div v-if="showCandidateToast" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
       <div class="toast show bg-success text-white" role="alert">
         <div class="toast-header bg-success text-white">
@@ -151,40 +138,7 @@ import PerfilEmpresa from '../components/PerfilEmpresa.vue'
 import GestionOfertas from '../components/GestionOfertas.vue'
 import CrearOferta from '../components/CrearOferta.vue'
 import AplicacionesRecibidas from '../components/AplicacionesRecibidas.vue'
-
-// 🆕 NUEVA IMPORTACIÓN
 import BusquedaCandidatos from '../components/BusquedaCandidatos.vue'
-
-// 🚧 Componente temporal para estadísticas (próximamente)
-const EstadisticasEmpresa = {
-  name: 'EstadisticasEmpresa',
-  emits: ['volver-dashboard'],
-  template: `
-    <div class="container py-5">
-      <div class="row justify-content-center">
-        <div class="col-md-8">
-          <div class="card text-center">
-            <div class="card-body py-5">
-              <i class="fas fa-chart-line fa-4x text-primary mb-4"></i>
-              <h3 class="card-title">Estadísticas y Reportes</h3>
-              <p class="card-text text-muted mb-4">
-                Dashboard avanzado con métricas detalladas de tus ofertas, candidatos y rendimiento.
-              </p>
-              <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>Próximamente:</strong> Dashboard completo con gráficos interactivos, 
-                exportación de reportes y análisis predictivo.
-              </div>
-              <button class="btn btn-primary btn-lg" @click="$emit('volver-dashboard')">
-                <i class="fas fa-home me-2"></i>Volver al Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
-}
 
 export default {
   name: 'EmpresaView',
@@ -194,8 +148,7 @@ export default {
     GestionOfertas,
     CrearOferta,
     AplicacionesRecibidas,
-    BusquedaCandidatos, // 🆕 COMPONENTE AGREGADO
-    EstadisticasEmpresa
+    BusquedaCandidatos
   },
   data() {
     return {
@@ -217,7 +170,7 @@ export default {
       toastType: 'success',
       toastTimeout: null,
 
-      // 🆕 Sistema de notificaciones para candidatos
+      // Sistema de notificaciones para candidatos
       showCandidateToast: false,
       candidateToastMessage: '',
       candidateToastTimeout: null
@@ -261,10 +214,8 @@ export default {
         'aplicaciones': 'aplicaciones',
         'candidatos': 'aplicaciones',
         'ver-candidatos': 'aplicaciones',
-        'buscar-candidatos': 'buscar-candidatos', // 🆕 NUEVA NAVEGACIÓN
-        'buscar-talento': 'buscar-candidatos', // 🆕 ALIAS
-        'estadisticas': 'estadisticas',
-        'reportes': 'estadisticas'
+        'buscar-candidatos': 'buscar-candidatos',
+        'buscar-talento': 'buscar-candidatos'
       }
       
       const nuevaSeccion = mapeoSecciones[seccion] || seccion
@@ -279,7 +230,6 @@ export default {
         this.currentTab = nuevaSeccion
         console.log('✅ Navegando a pestaña:', nuevaSeccion)
 
-        // 🆕 Mostrar mensaje especial para búsqueda de candidatos
         if (nuevaSeccion === 'buscar-candidatos') {
           this.showCandidateToastMessage('¡Nueva funcionalidad! Ahora puedes buscar candidatos ideales para tu empresa')
         }
@@ -327,14 +277,10 @@ export default {
       }
     },
 
-    // 🆕 NUEVOS MÉTODOS para manejar eventos de búsqueda de candidatos
     handleContactoCandidato(candidato) {
       console.log('📧 Manejando contacto con candidato:', candidato.nombreCompleto)
-      
-      // TODO: Implementar modal de contacto o integración con email
       this.showCandidateToastMessage(`Preparando contacto con ${candidato.nombreCompleto}...`)
       
-      // Simular proceso de contacto
       setTimeout(() => {
         this.showSuccessToast(`Mensaje enviado a ${candidato.nombreCompleto}`)
       }, 2000)
@@ -342,11 +288,8 @@ export default {
 
     handleInvitacionCandidato(candidato) {
       console.log('📨 Manejando invitación a candidato:', candidato.nombreCompleto)
-      
-      // TODO: Implementar modal de selección de oferta
       this.showCandidateToastMessage(`Invitando a ${candidato.nombreCompleto} a una de tus ofertas...`)
       
-      // Simular proceso de invitación
       setTimeout(() => {
         this.showSuccessToast(`Invitación enviada a ${candidato.nombreCompleto}`)
       }, 2000)
@@ -428,7 +371,6 @@ export default {
       }, 5000)
     },
 
-    // 🆕 Sistema de notificaciones para candidatos optimizado
     showCandidateToastMessage(mensaje) {
       if (this.candidateToastTimeout) {
         clearTimeout(this.candidateToastTimeout)
@@ -441,7 +383,7 @@ export default {
       
       this.candidateToastTimeout = setTimeout(() => {
         this.showCandidateToast = false
-      }, 6000) // 6 segundos para mensajes de candidatos
+      }, 6000)
     },
     
     hideToast() {
@@ -466,11 +408,9 @@ export default {
     currentTab(nuevaTab, tabAnterior) {
       console.log(`🔄 Cambio de pestaña: ${tabAnterior} → ${nuevaTab}`)
       
-      // 🆕 Lógica especial para la pestaña de búsqueda de candidatos
       if (nuevaTab === 'buscar-candidatos' && tabAnterior !== 'buscar-candidatos') {
         console.log('🔍 Entrando por primera vez a búsqueda de candidatos')
         
-        // Mostrar tips de uso después de 3 segundos
         setTimeout(() => {
           this.showCandidateToastMessage('💡 Tip: Usa los filtros avanzados para encontrar candidatos más específicos')
         }, 3000)
@@ -481,12 +421,10 @@ export default {
   mounted() {
     console.log('🏢 EmpresaView montado exitosamente')
     
-    // Valores temporales para desarrollo
     setTimeout(() => {
       this.actualizarContadores({ ofertas: 5, aplicaciones: 12 })
     }, 1000)
 
-    // 🆕 Mostrar notificación de nueva funcionalidad al cargar
     setTimeout(() => {
       this.showCandidateToastMessage('🎉 ¡Nueva funcionalidad disponible! Ahora puedes buscar candidatos ideales')
     }, 2000)
@@ -499,7 +437,6 @@ export default {
       clearTimeout(this.toastTimeout)
     }
 
-    // 🆕 Limpiar timeout de candidatos
     if (this.candidateToastTimeout) {
       clearTimeout(this.candidateToastTimeout)
     }
@@ -547,7 +484,7 @@ export default {
   background: none;
 }
 
-/* 🆕 ESTILOS ESPECIALES PARA BÚSQUEDA DE CANDIDATOS */
+/* ESTILOS ESPECIALES PARA BÚSQUEDA DE CANDIDATOS */
 .search-candidates-tab {
   position: relative;
   background: linear-gradient(135deg, transparent 0%, rgba(40, 167, 69, 0.05) 100%);
@@ -639,7 +576,6 @@ export default {
 
 .toast-body { font-weight: 500; }
 
-/* 🆕 Toast específico para candidatos con animación */
 .toast-container .toast.bg-success {
   animation: slideInRight 0.5s ease-out;
 }
@@ -672,7 +608,6 @@ export default {
   padding-bottom: 2rem;
 }
 
-/* 🆕 Indicador de nueva funcionalidad */
 .search-candidates-tab .badge {
   animation: glow 2s ease-in-out infinite alternate;
 }
